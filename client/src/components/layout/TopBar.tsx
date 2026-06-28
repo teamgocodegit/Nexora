@@ -10,6 +10,7 @@ export function TopBar() {
   const { setCommandOpen, setCreateHackathonOpen, setInviteOpen } = useUIStore();
   const { user } = useAuthStore();
   const isAdmin = user?.role === 'SUPER_ADMIN';
+  const isSubAdmin = user?.role === 'SUB_ADMIN' || user?.role === 'COORDINATOR';
   const [switcherOpen, setSwitcherOpen] = useState(false);
 
   return (
@@ -77,6 +78,13 @@ export function TopBar() {
                 <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
               </button>
             </>
+          )}
+          {isSubAdmin && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--green)' }} />
+              <span className="text-caption">Sub Admin</span>
+            </div>
           )}
           <div
             className="avatar avatar-sm ml-1.5 flex-shrink-0 font-display"

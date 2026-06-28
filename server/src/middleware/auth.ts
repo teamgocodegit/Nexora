@@ -1,10 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { requireSuperAdmin, requireSubAdmin, requirePermission, requireRole } from './permissions';
+import type { Permission } from './permissions';
+
 const JWT_SECRET = process.env.JWT_SECRET || 'nexora-secret-change-in-prod-min-32-chars!!';
+
 export interface AuthRequest extends Request {
   user?: { id: string; email?: string; phone?: string; role: string; name: string; };
   hackathonId?: string;
 }
+
 export const authenticate = (req: AuthRequest, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
@@ -15,7 +20,8 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
     next();
   } catch { return res.status(401).json({ error: 'Invalid or expired token' }); }
 };
-export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
-  if (req.user?.role !== 'SUPER_ADMIN') return res.status(403).json({ error: 'Admin access required' });
-  next();
-};
+
+export const requireAdmin = requireSuperAdmin;
+
+export { requireSuperAdmin, requireSubAdmin, requirePermission, requireRole };
+export type { Permission };

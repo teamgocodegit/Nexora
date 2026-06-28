@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
-import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth';
+import { authenticate, requireAdmin, requireRole, AuthRequest } from '../middleware/auth';
 import { io } from '../index';
 import { enqueueMessages } from '../jobs/messageQueue';
 

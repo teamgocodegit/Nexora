@@ -14,6 +14,7 @@ import { messagesRouter } from './routes/messages';
 import { metricsRouter, activityRouter, sheetsRouter } from './routes/other';
 import { certificatesRouter, verifyRouter } from './routes/certificates';
 import { inviteRouter } from './routes/invites';
+import { adminRouter } from './routes/admin';
 import { errorHandler } from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimiter';
 import { setupSocketHandlers } from './lib/socket';
@@ -49,6 +50,7 @@ app.use('/api/hackathons/:hackathonId/metrics', metricsRouter);
 app.use('/api/hackathons/:hackathonId/activity', activityRouter);
 app.use('/api/hackathons/:hackathonId/sheets', sheetsRouter);
 app.use('/api/invites', inviteRouter);
+app.use('/api/admin', adminRouter);
 
 app.get('/health', (_, res) => res.json({ status: 'ok', ts: new Date().toISOString() }));
 app.use((req, res) => res.status(404).json({ error: `Not found: ${req.method} ${req.path}` }));

@@ -10,6 +10,7 @@ import { CertificatesPage } from '@/pages/CertificatesPage';
 import { HackathonsPage } from '@/pages/HackathonsPage';
 import { HackathonDashboardPage } from '@/pages/HackathonDashboardPage';
 import { CoordinatorView } from '@/pages/CoordinatorView';
+import { AdminPage } from '@/pages/AdminPage';
 import { JoinPage } from '@/pages/JoinPage';
 
 function Guard({ children }: { children: React.ReactNode }) {
@@ -46,6 +47,7 @@ export default function App() {
           <Route path="checkin" element={<CheckInPage />} />
           <Route path="messages" element={<MessagesPage />} />
           <Route path="certificates" element={<CertificatesPage />} />
+          <Route path="admin" element={<AdminPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

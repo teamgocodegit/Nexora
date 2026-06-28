@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { TeamStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireSuperAdmin, requireRole } from '../middleware/auth';
 import type { AuthRequest } from '../middleware/auth';
 import { io } from '../index';
 import { emitToHackathon } from '../lib/socket';
@@ -52,7 +52,7 @@ teamsRouter.get(
     try {
       const { status, search, coordinatorId } = req.query;
 
-      const isCoordinator = req.user?.role === 'COORDINATOR';
+      const isCoordinator = req.user?.role === 'COORDINATOR' || req.user?.role === 'SUB_ADMIN';
       let coordFilter: Record<string, any> = {};
 
       if (isCoordinator) {
@@ -314,9 +314,21 @@ teamsRouter.post(
   }
 );
 
-// ✅ DELETE
-teamsRouter.delete('/:id', async (req: Request<Params>, res: Response) => {
+// ✅ DELETE (Super Admin only)
+teamsRouter.delete('/:id', requireSuperAdmin, async (req: Request<Params> & AuthRequest, res: Response) => {
   try {
+    const team = await prisma.team.findUnique({ where: { id: req.params.id } });
+    if (team) {
+      prisma.activityLog.create({
+        data: {
+          action: `Team "${team.name}" deleted by ${req.user!.name}`,
+          hackathonId: req.params.hackathonId,
+          actorId: req.user!.id,
+          teamId: team.id,
+          teamName: team.name,
+        },
+      }).catch(() => {});
+    }
     await prisma.team.delete({ where: { id: req.params.id } });
     res.json({ success: true });
   } catch {

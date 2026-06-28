@@ -1,22 +1,31 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, UserCheck, MessageSquare, Award, Zap,
-  ChevronDown, Plus, LogOut, Loader2, Check, Link2
+  ChevronDown, Plus, LogOut, Loader2, Check, Link2, Shield,
+  BarChart3, Settings, Megaphone,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useHackathonStore, Hackathon } from '@/store/hackathonStore';
 import { useUIStore } from '@/store/uiStore';
 import { cn, initials } from '@/lib/utils';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { disconnectSocket } from '@/lib/socket';
 
-const NAV_ITEMS = [
+const SUPER_ADMIN_NAV = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { to: '/hackathons', label: 'Hackathons', icon: Zap },
   { to: '/teams', label: 'Teams', icon: Users },
   { to: '/checkin', label: 'Check-in', icon: UserCheck },
   { to: '/messages', label: 'Messages', icon: MessageSquare },
   { to: '/certificates', label: 'Certificates', icon: Award },
+  { to: '/admin', label: 'Admins', icon: Shield },
+];
+
+const SUB_ADMIN_NAV = [
+  { to: '/', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  { to: '/teams', label: 'Teams', icon: Users },
+  { to: '/checkin', label: 'Check-in', icon: UserCheck },
+  { to: '/messages', label: 'Announcements', icon: MessageSquare },
 ];
 
 export function Sidebar() {
@@ -25,6 +34,8 @@ export function Sidebar() {
   const { setCreateHackathonOpen, setInviteOpen } = useUIStore();
   const navigate = useNavigate();
   const isAdmin = user?.role === 'SUPER_ADMIN';
+  const isSubAdmin = user?.role === 'SUB_ADMIN' || user?.role === 'COORDINATOR';
+  const navItems = useMemo(() => isAdmin ? SUPER_ADMIN_NAV : SUB_ADMIN_NAV, [isAdmin]);
   const [switcherOpen, setSwitcherOpen] = useState(false);
 
   const handleLogout = () => {
@@ -194,7 +205,7 @@ export function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         <p className="text-label px-2.5 mb-3">Navigation</p>
-        {NAV_ITEMS.map(({ to, label, icon: Icon, exact }) => (
+        {navItems.map(({ to, label, icon: Icon, exact }) => (
           <NavLink
             key={to}
             to={to}
@@ -260,7 +271,7 @@ export function Sidebar() {
               {user?.name || 'User'}
             </p>
             <p className="truncate text-caption">
-              {user?.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Coordinator'}
+              {user?.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Sub Admin'}
             </p>
           </div>
           <button

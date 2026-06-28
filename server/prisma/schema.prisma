@@ -17,6 +17,11 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  isActive      Boolean  @default(true)
+  lastLoginAt   DateTime?
+  lastActivityAt DateTime?
+  assignedRooms String?
+
   otpCodes     OtpCode[]
   hackathons   Hackathon[]             @relation("HackathonCreator")
   assignments  CoordinatorAssignment[]
@@ -233,6 +238,7 @@ model ActivityLog {
 
 enum Role {
   SUPER_ADMIN
+  SUB_ADMIN
   COORDINATOR
 }
 

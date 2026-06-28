@@ -1,6 +1,7 @@
 import { Outlet, NavLink } from 'react-router-dom';
-import { useEffect } from 'react';
-import { LayoutDashboard, Users, UserCheck, MessageSquare, Award } from 'lucide-react';
+import { useEffect, useMemo } from 'react';
+import { LayoutDashboard, Users, UserCheck, MessageSquare, Award, Shield } from 'lucide-react';
+import { useAuthStore } from '@/store/authStore';
 import { useHackathonStore } from '@/store/hackathonStore';
 import { useTeamsStore } from '@/store/teamsStore';
 import { useUIStore } from '@/store/uiStore';
@@ -16,16 +17,26 @@ import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { cn } from '@/lib/utils';
 
-const BOTTOM_NAV = [
-  { to: '/', label: 'Home', icon: LayoutDashboard, exact: true },
-  { to: '/teams', label: 'Teams', icon: Users },
-  { to: '/checkin', label: 'Check-in', icon: UserCheck },
-  { to: '/messages', label: 'Msgs', icon: MessageSquare },
-  { to: '/certificates', label: 'Certs', icon: Award },
-];
-
 export function AppShell() {
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === 'SUPER_ADMIN';
   const { activeHackathon, fetchHackathons } = useHackathonStore();
+  const bottomNav = useMemo(() => isAdmin
+    ? [
+        { to: '/', label: 'Home', icon: LayoutDashboard, exact: true },
+        { to: '/teams', label: 'Teams', icon: Users },
+        { to: '/checkin', label: 'Check-in', icon: UserCheck },
+        { to: '/messages', label: 'Msgs', icon: MessageSquare },
+        { to: '/certificates', label: 'Certs', icon: Award },
+        { to: '/admin', label: 'Admins', icon: Shield },
+      ]
+    : [
+        { to: '/', label: 'Home', icon: LayoutDashboard, exact: true },
+        { to: '/teams', label: 'Teams', icon: Users },
+        { to: '/checkin', label: 'Check-in', icon: UserCheck },
+        { to: '/messages', label: 'News', icon: MessageSquare },
+      ],
+  [isAdmin]);
   const { fetchTeams, upsertTeam } = useTeamsStore();
   const { broadcastOpen, sheetsOpen, createHackathonOpen, commandOpen, createTeamOpen, inviteOpen } = useUIStore();
 
@@ -89,7 +100,7 @@ export function AppShell() {
         </main>
 
         <nav className="bottom-nav">
-          {BOTTOM_NAV.map(({ to, label, icon: Icon, exact }) => (
+          {bottomNav.map(({ to, label, icon: Icon, exact }) => (
             <NavLink
               key={to}
               to={to}

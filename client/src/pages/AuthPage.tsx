@@ -7,7 +7,7 @@ import { useAuthStore } from '@/store/authStore';
 export function AuthPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<'SUPER_ADMIN' | 'COORDINATOR'>('SUPER_ADMIN');
+  const [role, setRole] = useState<'SUPER_ADMIN' | 'SUB_ADMIN' | 'COORDINATOR'>('SUPER_ADMIN');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -180,11 +180,12 @@ export function AuthPage() {
           <div className="relative">
             <select
               value={role}
-              onChange={(e) => setRole(e.target.value as 'SUPER_ADMIN' | 'COORDINATOR')}
+              onChange={(e) => setRole(e.target.value as 'SUPER_ADMIN' | 'SUB_ADMIN' | 'COORDINATOR')}
               className="input-dark appearance-none"
               style={{ cursor: 'pointer' }}
             >
               <option value="SUPER_ADMIN">Super Admin</option>
+              <option value="SUB_ADMIN">Sub Admin</option>
               <option value="COORDINATOR">Coordinator</option>
             </select>
             <ChevronDown

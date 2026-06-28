@@ -1,5 +1,19 @@
-export type UserRole = 'SUPER_ADMIN' | 'COORDINATOR';
+export type UserRole = 'SUPER_ADMIN' | 'SUB_ADMIN' | 'COORDINATOR';
+export type AdminStatus = 'ACTIVE' | 'INACTIVE';
 export interface AuthUser { id: string; name: string; email?: string; phone?: string; role: UserRole; token: string; }
+export interface AdminUser {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  role: UserRole;
+  isActive: boolean;
+  lastLoginAt?: string;
+  lastActivityAt?: string;
+  assignedRooms?: string;
+  createdAt: string;
+  assignments?: { hackathonId: string; hackathon: { id: string; name: string } }[];
+}
 export type HackathonStatus = 'DRAFT' | 'ACTIVE' | 'ENDED';
 export type HackathonMode = 'PREDEFINED' | 'ON_SPOT';
 export interface Hackathon { id: string; name: string; description?: string; startDate: string; endDate: string; status: HackathonStatus; mode: HackathonMode; venue?: string; maxTeams?: number; createdAt: string; }

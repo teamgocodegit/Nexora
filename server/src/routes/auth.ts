@@ -12,7 +12,7 @@ authRouter.post('/login', async (req, res) => {
   const schema = z.object({
     name: z.string().min(1, 'Name is required'),
     email: z.string().email('Valid email is required'),
-    role: z.enum(['SUPER_ADMIN', 'COORDINATOR']),
+    role: z.enum(['SUPER_ADMIN', 'SUB_ADMIN', 'COORDINATOR']),
   });
 
   const parsed = schema.safeParse(req.body);
