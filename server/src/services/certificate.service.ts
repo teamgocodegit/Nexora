@@ -74,7 +74,9 @@ export async function generateCertificates(
           p.email, p.name, pdfPath, certId, type,
         );
 
-        if (emailResult.success) {
+        if (emailResult.skipped) {
+          // email skipped (dev mode — no RESEND_API_KEY)
+        } else if (emailResult.success) {
           await prisma.certificate.update({
             where: { id: certId },
             data: { status: 'SENT', sentAt: new Date() },
