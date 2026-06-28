@@ -204,6 +204,7 @@ model Certificate {
   status          CertStatus @default(PENDING)
   pdfUrl          String?
   templateUrl     String?
+  errorMessage    String?
   generatedAt     DateTime?
   sentAt          DateTime?
   createdAt       DateTime   @default(now())
@@ -282,6 +283,7 @@ enum CertType {
 
 enum CertStatus {
   PENDING
+  GENERATING
   GENERATED
   SENT
   FAILED

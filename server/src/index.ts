@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'path';
 import { createServer } from 'http';
 import { Server as SocketServer } from 'socket.io';
 import cors from 'cors';
@@ -10,7 +11,8 @@ import { hackathonsRouter } from './routes/hackathons';
 import { teamsRouter } from './routes/teams';
 import { coordinatorsRouter } from './routes/coordinators';
 import { messagesRouter } from './routes/messages';
-import { metricsRouter, activityRouter, sheetsRouter, certificatesRouter } from './routes/other';
+import { metricsRouter, activityRouter, sheetsRouter } from './routes/other';
+import { certificatesRouter, verifyRouter } from './routes/certificates';
 import { inviteRouter } from './routes/invites';
 import { errorHandler } from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimiter';
@@ -35,6 +37,8 @@ credentials: true }));
 app.use(express.json());
 app.use('/api', apiLimiter);
 
+app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
+app.use('/api/certificates', verifyRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/hackathons', hackathonsRouter);
 app.use('/api/hackathons/:hackathonId/teams', teamsRouter);

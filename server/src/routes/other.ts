@@ -52,25 +52,4 @@ sheetsRouter.post('/sync', requireAdmin, async (req: AuthRequest, res) => {
   } catch (err: any) { res.status(500).json({ error: 'Sheets sync failed', details: err.message }); }
 });
 
-export const certificatesRouter = Router({ mergeParams: true });
-certificatesRouter.use(authenticate);
-certificatesRouter.get('/', async (req: AuthRequest, res) => {
-  try { const certs = await prisma.certificate.findMany({ where: { hackathonId: req.params.hackathonId! }, include: { team: { select: { id: true, name: true } } }, orderBy: { createdAt: 'desc' } }); res.json(certs); }
-  catch { res.status(500).json({ error: 'Failed to fetch certificates' }); }
-});
-certificatesRouter.post('/generate', requireAdmin, async (req: AuthRequest, res) => {
-  const { teamIds, type = 'PARTICIPATION' } = req.body;
-  const hackathonId = req.params.hackathonId!;
-  try {
-    const teams = await prisma.team.findMany({ where: teamIds ? { hackathonId, id: { in: teamIds } } : { hackathonId }, include: { participants: true } });
-    let created = 0;
-    for (const team of teams) {
-      for (const p of team.participants) {
-        if (!p.email) continue;
-        await prisma.certificate.upsert({ where: { id: `cert-${team.id}-${p.id}` }, update: {}, create: { id: `cert-${team.id}-${p.id}`, hackathonId, teamId: team.id, participantName: p.name, email: p.email, type, status: 'PENDING' } });
-        created++;
-      }
-    }
-    res.json({ created, message: `${created} certificates queued` });
-  } catch { res.status(500).json({ error: 'Failed to generate certificates' }); }
-});
+

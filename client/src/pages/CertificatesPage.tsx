@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Award, CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Award, CheckCircle2, Clock, Loader2, XCircle } from 'lucide-react';
 import { useHackathonStore } from '@/store/hackathonStore';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
@@ -15,6 +15,13 @@ interface Cert {
   team: { name: string };
 }
 
+interface GenResult {
+  total: number;
+  generated: number;
+  emailed: number;
+  failed: number;
+}
+
 const STATUS_CONFIG: Record<
   string,
   { icon: React.ReactNode; color: string }
@@ -22,6 +29,10 @@ const STATUS_CONFIG: Record<
   PENDING: {
     icon: <Clock className="w-4 h-4" />,
     color: 'var(--yellow)',
+  },
+  GENERATING: {
+    icon: <Loader2 className="w-4 h-4" />,
+    color: 'var(--blue)',
   },
   GENERATED: {
     icon: <CheckCircle2 className="w-4 h-4" />,
@@ -65,15 +76,28 @@ export function CertificatesPage() {
 
   useEffect(() => { load(); }, [activeHackathon?.id]);
 
+  const stats = useMemo(() => {
+    const s = { total: certs.length, generated: 0, emailed: 0, failed: 0 };
+    for (const c of certs) {
+      if (c.status === 'GENERATED') s.generated++;
+      if (c.status === 'SENT') s.emailed++;
+      if (c.status === 'FAILED') s.failed++;
+    }
+    return s;
+  }, [certs]);
+
   const generate = async () => {
     if (!activeHackathon) return;
     setGenerating(true);
     try {
-      const r = await api.post<{ created: number }>(
+      const r = await api.post<GenResult>(
         `/hackathons/${activeHackathon.id}/certificates/generate`,
         { type: certType }
       );
-      toast(`${r.created} certificates queued`, 'success');
+      toast(
+        `Generated ${r.generated} · Emailed ${r.emailed} · Failed ${r.failed} (${r.total} total)`,
+        r.failed > 0 ? 'warning' : 'success'
+      );
       load();
     } catch (e: any) {
       toast(e.message, 'error');
@@ -92,10 +116,10 @@ export function CertificatesPage() {
   return (
     <div className="max-w-2xl mx-auto px-5 py-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-heading">Certificates</h1>
-          <p className="text-caption mt-0.5">{certs.length} generated</p>
+          <p className="text-caption mt-0.5">{certs.length} total</p>
         </div>
         {isAdmin && (
           <button
@@ -112,6 +136,33 @@ export function CertificatesPage() {
           </button>
         )}
       </div>
+
+      {/* Stats bar */}
+      {certs.length > 0 && (
+        <div
+          className="card p-3 mb-4 grid grid-cols-3 gap-3 text-center"
+          style={{ border: '1px solid var(--border)' }}
+        >
+          <div>
+            <p className="text-lg font-bold" style={{ color: 'var(--text)' }}>
+              {stats.generated}
+            </p>
+            <p className="text-caption">Generated</p>
+          </div>
+          <div>
+            <p className="text-lg font-bold" style={{ color: 'var(--green)' }}>
+              {stats.emailed}
+            </p>
+            <p className="text-caption">Emailed</p>
+          </div>
+          <div>
+            <p className="text-lg font-bold" style={{ color: 'var(--red)' }}>
+              {stats.failed}
+            </p>
+            <p className="text-caption">Failed</p>
+          </div>
+        </div>
+      )}
 
       {/* Type selector */}
       {isAdmin && (
