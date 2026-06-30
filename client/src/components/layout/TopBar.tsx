@@ -1,4 +1,4 @@
-import { Search, Plus, ChevronDown, Zap, Link2, Bell } from 'lucide-react';
+import { Search, Plus, ChevronDown, Zap, Link2 } from 'lucide-react';
 import { useHackathonStore } from '@/store/hackathonStore';
 import { useUIStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';

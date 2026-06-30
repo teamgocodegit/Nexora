@@ -142,13 +142,13 @@ inviteRouter.post('/:token/accept', authenticate, async (req: AuthRequest, res) 
     });
 
     // Log activity
-    await prisma.activityLog.create({
+    prisma.activityLog.create({
       data: {
         action: `${req.user!.name} joined as coordinator via invite link`,
         hackathonId: invite.hackathonId,
         actorId: req.user!.id,
       },
-    }).catch(() => {});
+    }).catch((e) => logger.error(`[ActivityLog] ${e}`));
 
     logger.info(`[Invite] ${req.user!.id} accepted invite for hackathon ${invite.hackathonId}`);
 

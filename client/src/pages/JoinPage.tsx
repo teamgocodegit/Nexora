@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Zap, Users, MapPin, Calendar, ArrowRight, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { Zap, Users, MapPin, Calendar, ArrowRight, CheckCircle2, XCircle } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import { formatDate } from '@/lib/utils';

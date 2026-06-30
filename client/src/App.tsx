@@ -4,7 +4,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { AuthPage } from '@/pages/AuthPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { TeamsPage } from '@/pages/TeamsPage';
-import { CheckInPage } from '@/pages/CheckInPage';
+import { CheckInPage } from '@/pages/Checkinpage';
 import { MessagesPage } from '@/pages/MessagesPage';
 import { CertificatesPage } from '@/pages/CertificatesPage';
 import { HackathonsPage } from '@/pages/HackathonsPage';

@@ -5,7 +5,10 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 
 export const authRouter = Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'nexora-secret-change-in-prod-min-32-chars!!';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required');
+}
 
 /* ─── POST /auth/login ─── */
 authRouter.post('/login', async (req, res) => {

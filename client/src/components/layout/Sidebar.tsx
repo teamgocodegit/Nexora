@@ -2,7 +2,6 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, UserCheck, MessageSquare, Award, Zap,
   ChevronDown, Plus, LogOut, Loader2, Check, Link2, Shield,
-  BarChart3, Settings, Megaphone,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useHackathonStore, Hackathon } from '@/store/hackathonStore';

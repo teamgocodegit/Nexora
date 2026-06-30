@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Phone, UserCheck, RotateCcw, MessageSquare, Edit2, Check, MapPin, Trash2, ChevronRight } from 'lucide-react';
+import { X, Phone, UserCheck, RotateCcw, MessageSquare, Edit2, Check, MapPin, Trash2 } from 'lucide-react';
 import { Team, TeamStatus, useTeamsStore } from '@/store/teamsStore';
 import { useHackathonStore } from '@/store/hackathonStore';
 import { useUIStore } from '@/store/uiStore';

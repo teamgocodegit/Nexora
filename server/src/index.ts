@@ -22,6 +22,10 @@ import { logger } from './lib/logger';
 
 dotenv.config();
 
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required. Copy server/.env.example to server/.env and set a secure secret.');
+}
+
 const app = express();
 const httpServer = createServer(app);
 

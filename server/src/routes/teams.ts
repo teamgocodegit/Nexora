@@ -2,11 +2,12 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { TeamStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { authenticate, requireSuperAdmin, requireRole } from '../middleware/auth';
+import { authenticate, requireSuperAdmin } from '../middleware/auth';
 import type { AuthRequest } from '../middleware/auth';
 import { io } from '../index';
 import { emitToHackathon } from '../lib/socket';
 import { getMetrics } from '../services/metricsService';
+import { logger } from '../lib/logger';
 
 export const teamsRouter = Router({ mergeParams: true });
 teamsRouter.use(authenticate);
@@ -187,7 +188,7 @@ teamsRouter.patch(
             metadata: req.body,
           },
         })
-        .catch(() => {});
+        .catch((e) => logger.error(`[ActivityLog] ${e}`));
 
       const mapped = mapTeam(team);
 
@@ -202,7 +203,7 @@ teamsRouter.patch(
         .then((m) =>
           emitToHackathon(io, req.params.hackathonId, 'metrics:updated', m)
         )
-        .catch(() => {});
+        .catch((e) => logger.error(`[Metrics] ${e}`));
 
       res.json(mapped);
     } catch (err: any) {
@@ -234,7 +235,7 @@ teamsRouter.post(
             teamName: team.name,
           },
         })
-        .catch(() => {});
+        .catch((e) => logger.error(`[ActivityLog] ${e}`));
 
       const mapped = mapTeam(team);
 
@@ -314,6 +315,48 @@ teamsRouter.post(
   }
 );
 
+// ✅ UNDO CHECK-IN
+teamsRouter.post(
+  '/:id/undo-checkin',
+  async (req: Request<Params> & AuthRequest, res: Response) => {
+    try {
+      const team = await prisma.team.update({
+        where: { id: req.params.id },
+        data: { status: 'REGISTERED', checkInTime: null },
+        include: teamInclude,
+      });
+
+      prisma.activityLog
+        .create({
+          data: {
+            action: `Team "${team.name}" check-in undone`,
+            hackathonId: req.params.hackathonId,
+            actorId: req.user!.id,
+            teamId: team.id,
+            teamName: team.name,
+          },
+        })
+        .catch((e) => logger.error(`[ActivityLog] ${e}`));
+
+      const mapped = mapTeam(team);
+
+      emitToHackathon(io, req.params.hackathonId, 'team:updated', mapped);
+
+      getMetrics(req.params.hackathonId)
+        .then((m) =>
+          emitToHackathon(io, req.params.hackathonId, 'metrics:updated', m)
+        )
+        .catch((e) => logger.error(`[Metrics] ${e}`));
+
+      res.json(mapped);
+    } catch (err: any) {
+      res
+        .status(500)
+        .json({ error: 'Failed to undo check-in', details: err.message });
+    }
+  }
+);
+
 // ✅ DELETE (Super Admin only)
 teamsRouter.delete('/:id', requireSuperAdmin, async (req: Request<Params> & AuthRequest, res: Response) => {
   try {
@@ -327,7 +370,7 @@ teamsRouter.delete('/:id', requireSuperAdmin, async (req: Request<Params> & Auth
           teamId: team.id,
           teamName: team.name,
         },
-      }).catch(() => {});
+      }).catch((e) => logger.error(`[ActivityLog] ${e}`));
     }
     await prisma.team.delete({ where: { id: req.params.id } });
     res.json({ success: true });

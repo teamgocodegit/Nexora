@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { requireSuperAdmin, requireSubAdmin, requirePermission, requireRole } from './permissions';
 import type { Permission } from './permissions';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'nexora-secret-change-in-prod-min-32-chars!!';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 export interface AuthRequest extends Request {
   user?: { id: string; email?: string; phone?: string; role: string; name: string; };
