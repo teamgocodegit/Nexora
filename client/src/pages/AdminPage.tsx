@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Shield, Plus, X, Check, Search, AlertCircle } from 'lucide-react';
+import { Shield, Plus, X, Check, Search } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useHackathonStore } from '@/store/hackathonStore';
 import { useUIStore } from '@/store/uiStore';
