@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
+import { prisma } from '../lib/prisma';
 import { authenticate, AuthRequest } from '../middleware/auth';
 
 export const authRouter = Router();
@@ -47,10 +48,17 @@ authRouter.patch('/me', authenticate, async (req: AuthRequest, res) => {
     return res.status(400).json({ error: 'Invalid input' });
   }
 
-  const user = {
-    ...req.user,
-    ...(parsed.data.name && { name: parsed.data.name }),
-  };
-
-  return res.json(user);
+  try {
+    const { prisma } = await import('../lib/prisma');
+    const updated = await prisma.user.update({
+      where: { id: req.user!.id },
+      data: {
+        ...(parsed.data.name && { name: parsed.data.name }),
+      },
+      select: { id: true, name: true, email: true, phone: true, role: true },
+    });
+    return res.json(updated);
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to update profile' });
+  }
 });

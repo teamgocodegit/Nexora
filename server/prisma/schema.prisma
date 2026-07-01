@@ -156,6 +156,7 @@ model ScoringCriteria {
   description String?
   maxScore    Int     @default(10)
   hackathonId String
+  hackathon   Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
   scores      Score[]
 }
 
