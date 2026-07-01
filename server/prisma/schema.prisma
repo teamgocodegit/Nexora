@@ -79,6 +79,7 @@ model Hackathon {
   activityLogs ActivityLog[]
   inviteLinks  InviteLink[]
   problemStatements ProblemStatement[]
+  scoringCriteria    ScoringCriteria[]
 }
 
 model CoordinatorAssignment {
