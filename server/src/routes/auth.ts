@@ -49,15 +49,24 @@ authRouter.patch('/me', authenticate, async (req: AuthRequest, res) => {
   }
 
   try {
-    const { prisma } = await import('../lib/prisma');
-    const updated = await prisma.user.update({
-      where: { id: req.user!.id },
-      data: {
-        ...(parsed.data.name && { name: parsed.data.name }),
-      },
-      select: { id: true, name: true, email: true, phone: true, role: true },
+    const existing = await prisma.user.findUnique({ where: { id: req.user!.id } });
+    if (existing) {
+      const updated = await prisma.user.update({
+        where: { id: req.user!.id },
+        data: {
+          ...(parsed.data.name && { name: parsed.data.name }),
+        },
+        select: { id: true, name: true, email: true, phone: true, role: true },
+      });
+      return res.json(updated);
+    }
+    // Dev-mode user (not in DB) — respond with updated payload
+    return res.json({
+      id: req.user!.id,
+      name: parsed.data.name || req.user!.name,
+      email: req.user!.email,
+      role: req.user!.role,
     });
-    return res.json(updated);
   } catch (err: any) {
     return res.status(500).json({ error: 'Failed to update profile' });
   }

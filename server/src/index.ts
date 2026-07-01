@@ -6,6 +6,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 
+import { prisma } from './lib/prisma';
 import { authRouter } from './routes/auth';
 import { hackathonsRouter } from './routes/hackathons';
 import { teamsRouter } from './routes/teams';
@@ -32,13 +33,23 @@ const httpServer = createServer(app);
 app.set('trust proxy', 1);
 
 export const io = new SocketServer(httpServer, {
-  cors: { origin: true
-}
+  cors: {
+    origin: process.env.CLIENT_URL || true,
+    credentials: true,
+  },
 });
 
-app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors({ origin: true,
-credentials: true }));
+const ALLOWED_ORIGINS = process.env.NODE_ENV === 'production'
+  ? (process.env.CLIENT_URL || '').split(',').filter(Boolean)
+  : true;
+
+app.use(helmet({
+  contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false,
+}));
+app.use(cors({
+  origin: ALLOWED_ORIGINS,
+  credentials: true,
+}));
 app.use(express.json());
 app.use('/api', apiLimiter);
 
@@ -56,7 +67,14 @@ app.use('/api/hackathons/:hackathonId/sheets', sheetsRouter);
 app.use('/api/invites', inviteRouter);
 app.use('/api/admin', adminRouter);
 
-app.get('/health', (_, res) => res.json({ status: 'ok', ts: new Date().toISOString() }));
+app.get('/health', async (_, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: 'ok', db: 'connected', ts: new Date().toISOString() });
+  } catch {
+    res.status(503).json({ status: 'error', db: 'disconnected', ts: new Date().toISOString() });
+  }
+});
 app.use((req, res) => res.status(404).json({ error: `Not found: ${req.method} ${req.path}` }));
 app.use(errorHandler);
 

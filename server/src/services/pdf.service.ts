@@ -1,23 +1,24 @@
 import puppeteer from 'puppeteer';
 import path from 'path';
 
-const CHROME_PATH = process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+const CHROME_PATH = process.env.CHROME_PATH;
 
 function uploadsDir(): string {
   return path.resolve(__dirname, '../../uploads/certificates');
 }
 
 export async function generatePdf(html: string, certificateId: string): Promise<string> {
-  const browser = await puppeteer.launch({
+  const launchOpts: any = {
     headless: true,
-    executablePath: CHROME_PATH,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
     ],
-  });
+  };
+  if (CHROME_PATH) launchOpts.executablePath = CHROME_PATH;
+  const browser = await puppeteer.launch(launchOpts);
 
   try {
     const page = await browser.newPage();

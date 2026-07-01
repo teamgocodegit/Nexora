@@ -3,11 +3,10 @@ import jwt from 'jsonwebtoken';
 import { requireSuperAdmin, requireSubAdmin, requirePermission, requireRole } from './permissions';
 import type { Permission } from './permissions';
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET!;
 
 export interface AuthRequest extends Request {
   user?: { id: string; email?: string; phone?: string; role: string; name: string; };
-  hackathonId?: string;
 }
 
 export const authenticate = (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -16,7 +15,6 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
   if (!token) return res.status(401).json({ error: 'Unauthorized — no token' });
   try {
     req.user = jwt.verify(token, JWT_SECRET) as AuthRequest['user'];
-    if (req.params?.hackathonId) req.hackathonId = req.params.hackathonId;
     next();
   } catch { return res.status(401).json({ error: 'Invalid or expired token' }); }
 };

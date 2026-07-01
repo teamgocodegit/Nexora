@@ -106,7 +106,7 @@ adminRouter.patch('/:adminId', requireSuperAdmin, async (req: AuthRequest, res) 
   const { name, email, phone, isActive, assignedRooms, hackathonId } = parsed.data;
 
   try {
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     if (name !== undefined) updateData.name = name;
     if (email !== undefined) updateData.email = email || null;
     if (phone !== undefined) updateData.phone = phone || null;

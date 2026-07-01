@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { TeamStatus } from '@prisma/client';
+import { TeamStatus, Team } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { authenticate, requireSuperAdmin } from '../middleware/auth';
 import type { AuthRequest } from '../middleware/auth';
@@ -28,7 +28,7 @@ const teamInclude = {
   problemStatement: { select: { id: true, title: true } },
 };
 
-const mapTeam = (t: any) => ({
+const mapTeam = (t: Team & { coordinator?: { userId: string; user?: { name: string } | null } | null }) => ({
   ...t,
   coordinator: t.coordinator
     ? {
