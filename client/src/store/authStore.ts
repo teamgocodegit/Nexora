@@ -6,7 +6,7 @@ export interface AuthUser {
   name: string;
   email?: string;
   phone?: string;
-  role: 'SUPER_ADMIN' | 'SUB_ADMIN' | 'COORDINATOR';
+  role: 'SUPER_ADMIN' | 'SUB_ADMIN';
 }
 
 interface AuthState {

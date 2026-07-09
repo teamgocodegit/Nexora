@@ -9,7 +9,7 @@ adminRouter.use(authenticate);
 adminRouter.get('/', requireSuperAdmin, async (_req: AuthRequest, res) => {
   try {
     const admins = await prisma.user.findMany({
-      where: { role: { in: ['SUB_ADMIN', 'COORDINATOR'] } },
+      where: { role: 'SUB_ADMIN' },
       include: {
         assignments: {
           include: { hackathon: { select: { id: true, name: true } } },

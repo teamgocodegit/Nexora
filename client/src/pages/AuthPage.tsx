@@ -7,7 +7,7 @@ import { useAuthStore } from '@/store/authStore';
 export function AuthPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<'SUPER_ADMIN' | 'SUB_ADMIN' | 'COORDINATOR'>('SUPER_ADMIN');
+  const [role, setRole] = useState<'SUPER_ADMIN' | 'SUB_ADMIN'>('SUPER_ADMIN');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();

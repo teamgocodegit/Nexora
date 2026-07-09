@@ -7,38 +7,113 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  SUPER_ADMIN
+  SUB_ADMIN
+}
+
+enum HackathonStatus {
+  DRAFT
+  ACTIVE
+  ENDED
+}
+
+enum HackathonMode {
+  PREDEFINED
+  ON_SPOT
+}
+
+enum TeamStatus {
+  REGISTERED
+  CHECKED_IN
+  ACTIVE
+  SUBMITTED
+  DISQUALIFIED
+}
+
+enum RegistrationStatus {
+  PENDING_APPROVAL
+  ACCEPTED
+  WAITLISTED
+  REJECTED
+}
+
+enum Channel {
+  WHATSAPP
+  SMS
+  INTERNAL
+}
+
+enum MsgStatus {
+  PENDING
+  QUEUED
+  SENT
+  FAILED
+}
+
+enum RecipientType {
+  ALL
+  SELECTED
+  SINGLE
+}
+
+enum CertType {
+  PARTICIPATION
+  WINNER
+  RUNNER_UP
+  SPECIAL
+}
+
+enum CertStatus {
+  PENDING
+  GENERATING
+  GENERATED
+  SENT
+  FAILED
+}
+
+enum RoomStatus {
+  AVAILABLE
+  NEAR_CAPACITY
+  FULL
+  CLOSED
+}
+
+enum AutomationTriggerType {
+  TIME_BASED
+  EVENT_TRIGGERED
+}
+
+enum AutomationStatus {
+  ACTIVE
+  PAUSED
+  SCHEDULED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
 model User {
   id        String   @id @default(cuid())
   name      String
   email     String?  @unique
   phone     String?  @unique
-  role      Role     @default(COORDINATOR)
+  role      Role     @default(SUB_ADMIN)
   avatarUrl String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  isActive      Boolean  @default(true)
-  lastLoginAt   DateTime?
-  lastActivityAt DateTime?
-  assignedRooms String?
+  isActive        Boolean  @default(true)
+  lastLoginAt     DateTime?
+  lastActivityAt  DateTime?
+  assignedRooms   String?
 
-  otpCodes     OtpCode[]
   hackathons   Hackathon[]             @relation("HackathonCreator")
   assignments  CoordinatorAssignment[]
   sentMessages Message[]
   activityLogs ActivityLog[]
   inviteLinks  InviteLink[]
-}
-
-model OtpCode {
-  id        String   @id @default(cuid())
-  code      String
-  contact   String
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-
-  user   User?  @relation(fields: [userId], references: [id])
-  userId String?
+  automations  Automation[]
 }
 
 model InviteLink {
@@ -69,17 +144,103 @@ model Hackathon {
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
+  slug               String?    @unique
+  registrationOpen   DateTime?
+  registrationDeadline DateTime?
+  minTeamSize        Int        @default(1)
+  maxTeamSize        Int        @default(5)
+  approvalRequired   Boolean    @default(true)
+  waitlistEnabled    Boolean    @default(false)
+  registrationFields Json?
+
   createdBy   User   @relation("HackathonCreator", fields: [createdById], references: [id])
   createdById String
 
-  teams        Team[]
-  assignments  CoordinatorAssignment[]
-  messages     Message[]
-  certificates Certificate[]
-  activityLogs ActivityLog[]
-  inviteLinks  InviteLink[]
-  problemStatements ProblemStatement[]
+  teams              Team[]
+  rooms              Room[]
+  registrations      Registration[]
+  assignments        CoordinatorAssignment[]
+  messages           Message[]
+  certificates       Certificate[]
+  activityLogs       ActivityLog[]
+  inviteLinks        InviteLink[]
+  problemStatements  ProblemStatement[]
   scoringCriteria    ScoringCriteria[]
+  automations        Automation[]
+  milestones         EventMilestone[]
+}
+
+model Registration {
+  id              String             @id @default(cuid())
+  registrationId  String             @unique
+  status          RegistrationStatus @default(PENDING_APPROVAL)
+  teamName        String
+  college         String?
+  city            String?
+  leaderName      String
+  leaderEmail     String
+  leaderPhone     String?
+  memberData      Json?
+  gitHubUrl       String?
+  linkedInUrl     String?
+  portfolioUrl    String?
+  dietary         String?
+  accessibility   String?
+  notes           String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  hackathon   Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+  hackathonId String
+}
+
+model Room {
+  id        String     @id @default(cuid())
+  name      String
+  building  String?
+  floor     String?
+  capacity  Int        @default(30)
+  status    RoomStatus @default(AVAILABLE)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  hackathon   Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+  hackathonId String
+
+  @@unique([hackathonId, name])
+}
+
+model Automation {
+  id              String               @id @default(cuid())
+  name            String
+  description     String?
+  triggerType     AutomationTriggerType
+  triggerConfig   Json?
+  recipientGroup  String?
+  template        String?
+  templateSubject String?
+  status          AutomationStatus     @default(ACTIVE)
+  scheduledTime   DateTime?
+  lastExecutedAt  DateTime?
+  createdAt       DateTime             @default(now())
+
+  hackathon   Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+  hackathonId String
+
+  createdBy   User  @relation(fields: [createdById], references: [id])
+  createdById String
+}
+
+model EventMilestone {
+  id          String   @id @default(cuid())
+  title       String
+  time        DateTime
+  description String?
+
+  hackathon   Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+  hackathonId String
+
+  createdAt DateTime @default(now())
 }
 
 model CoordinatorAssignment {
@@ -109,6 +270,8 @@ model ProblemStatement {
 
 model Team {
   id             String     @id @default(cuid())
+  teamId         String?    @unique
+  qrToken        String?    @unique
   name           String
   status         TeamStatus @default(REGISTERED)
   room           String?
@@ -118,6 +281,7 @@ model Team {
   notes          String?
   leaderPhone    String?
   checkInTime    DateTime?
+  checkInBy      String?
   submissionTime DateTime?
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
@@ -155,6 +319,7 @@ model ScoringCriteria {
   name        String
   description String?
   maxScore    Int     @default(10)
+  weight      Float   @default(1.0)
   hackathonId String
   hackathon   Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
   scores      Score[]
@@ -236,63 +401,4 @@ model ActivityLog {
 
   actor   User   @relation(fields: [actorId], references: [id])
   actorId String
-}
-
-enum Role {
-  SUPER_ADMIN
-  SUB_ADMIN
-  COORDINATOR
-}
-
-enum HackathonStatus {
-  DRAFT
-  ACTIVE
-  ENDED
-}
-
-enum HackathonMode {
-  PREDEFINED
-  ON_SPOT
-}
-
-enum TeamStatus {
-  REGISTERED
-  CHECKED_IN
-  ACTIVE
-  SUBMITTED
-  DISQUALIFIED
-}
-
-enum Channel {
-  WHATSAPP
-  SMS
-  INTERNAL
-}
-
-enum MsgStatus {
-  PENDING
-  QUEUED
-  SENT
-  FAILED
-}
-
-enum RecipientType {
-  ALL
-  SELECTED
-  SINGLE
-}
-
-enum CertType {
-  PARTICIPATION
-  WINNER
-  RUNNER_UP
-  SPECIAL
-}
-
-enum CertStatus {
-  PENDING
-  GENERATING
-  GENERATED
-  SENT
-  FAILED
 }

@@ -27,7 +27,10 @@ export type Permission =
   | 'team:checkin'
   | 'team:view'
   | 'team:search'
-  | 'announcement:view';
+  | 'announcement:view'
+  | 'room:manage'
+  | 'automation:manage'
+  | 'registration:manage';
 
 const ROLE_PERMISSIONS: Record<string, Permission[]> = {
   SUPER_ADMIN: [
@@ -46,12 +49,11 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'qrcode:manage',
     'team:checkin', 'team:view', 'team:search',
     'announcement:view',
+    'room:manage',
+    'automation:manage',
+    'registration:manage',
   ],
   SUB_ADMIN: [
-    'team:checkin', 'team:view', 'team:search',
-    'announcement:view',
-  ],
-  COORDINATOR: [
     'team:checkin', 'team:view', 'team:search',
     'announcement:view',
   ],

@@ -10,7 +10,7 @@ const TEAMS = [
 ];
 
 async function main() {
-  console.log('🌱 Seeding Nexora…');
+  console.log('Seeding Nexora…');
 
   const admin = await prisma.user.upsert({
     where: { email: 'admin@nexora.dev' },
@@ -19,8 +19,8 @@ async function main() {
   });
 
   const coords = await Promise.all([
-    prisma.user.upsert({ where: { email: 'coord1@nexora.dev' }, update: {}, create: { name: 'Riya Sharma', email: 'coord1@nexora.dev', role: 'COORDINATOR' } }),
-    prisma.user.upsert({ where: { email: 'coord2@nexora.dev' }, update: {}, create: { name: 'Aakash Patel', email: 'coord2@nexora.dev', role: 'COORDINATOR' } }),
+    prisma.user.upsert({ where: { email: 'coord1@nexora.dev' }, update: {}, create: { name: 'Riya Sharma', email: 'coord1@nexora.dev', role: 'SUB_ADMIN' } }),
+    prisma.user.upsert({ where: { email: 'coord2@nexora.dev' }, update: {}, create: { name: 'Aakash Patel', email: 'coord2@nexora.dev', role: 'SUB_ADMIN' } }),
   ]);
 
   const hackathon = await prisma.hackathon.upsert({
@@ -37,33 +37,33 @@ async function main() {
       maxTeams: 30,
       mode: 'PREDEFINED',
       createdById: admin.id,
+      slug: 'buildfest-2024',
     },
   });
 
-  const assignments = await Promise.all(
-    coords.map((c) =>
-      prisma.coordinatorAssignment.upsert({
-        where: { hackathonId_userId: { hackathonId: hackathon.id, userId: c.id } },
-        update: {},
-        create: { hackathonId: hackathon.id, userId: c.id },
-      })
-    )
-  );
+  for (const c of coords) {
+    await prisma.coordinatorAssignment.upsert({
+      where: { hackathonId_userId: { hackathonId: hackathon.id, userId: c.id } },
+      update: {},
+      create: { hackathonId: hackathon.id, userId: c.id },
+    });
+  }
 
   for (let i = 0; i < TEAMS.length; i++) {
     const t = TEAMS[i];
-    const assignment = assignments[i % assignments.length];
+    const teamId = `NEX-BF24-${String(i + 1).padStart(3, '0')}`;
     await prisma.team.upsert({
       where: { hackathonId_name: { hackathonId: hackathon.id, name: t.name } },
       update: {},
       create: {
         hackathonId: hackathon.id,
         name: t.name,
+        teamId,
+        qrToken: `qr-${teamId.toLowerCase()}-${crypto.randomUUID().slice(0, 8)}`,
         status: t.status,
         room: t.room,
         leaderPhone: t.phone,
         projectName: t.project,
-        coordinatorId: t.status === 'REGISTERED' ? undefined : assignment.id,
         checkInTime: ['CHECKED_IN', 'ACTIVE', 'SUBMITTED'].includes(t.status) ? new Date(Date.now() - Math.random() * 3600000 * 6) : undefined,
         submissionTime: t.status === 'SUBMITTED' ? new Date(Date.now() - Math.random() * 3600000) : undefined,
         participants: {
@@ -76,19 +76,16 @@ async function main() {
         },
       },
     });
-    console.log(`  ✓ ${t.name} [${t.status}]`);
   }
 
   await prisma.inviteLink.create({
     data: { hackathonId: hackathon.id, createdById: admin.id, expiresAt: new Date(Date.now() + 7 * 24 * 3600000) },
   });
 
-  await prisma.otpCode.create({
-    data: { code: '123456', contact: 'admin@nexora.dev', expiresAt: new Date(Date.now() + 365 * 24 * 3600000), userId: admin.id },
-  });
-
-  console.log('\n✅ Seed complete!');
-  console.log('   Login: admin@nexora.dev  →  OTP: 123456 (shown in dev console)');
+  console.log('Seed complete!');
+  console.log('  Login: admin@nexora.dev (SUPER_ADMIN)');
+  console.log('  Login: coord1@nexora.dev (SUB_ADMIN)');
+  console.log('  Login: coord2@nexora.dev (SUB_ADMIN)');
 }
 
 main().catch(console.error).finally(() => prisma.$disconnect());

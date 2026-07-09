@@ -53,7 +53,7 @@ teamsRouter.get(
     try {
       const { status, search, coordinatorId } = req.query;
 
-      const isCoordinator = req.user?.role === 'COORDINATOR' || req.user?.role === 'SUB_ADMIN';
+      const isCoordinator = req.user?.role === 'SUB_ADMIN';
       let coordFilter: Record<string, any> = {};
 
       if (isCoordinator) {
@@ -132,9 +132,10 @@ teamsRouter.get(
   }
 );
 
-// ✅ UPDATE TEAM
+// ✅ UPDATE TEAM (Super Admin only)
 teamsRouter.patch(
   '/:id',
+  requireSuperAdmin,
   async (req: Request<Params> & AuthRequest, res: Response) => {
     const {
       status,
