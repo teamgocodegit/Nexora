@@ -11,7 +11,9 @@ import { HackathonsPage } from '@/pages/HackathonsPage';
 import { HackathonDashboardPage } from '@/pages/HackathonDashboardPage';
 import { CoordinatorView } from '@/pages/CoordinatorView';
 import { AdminPage } from '@/pages/AdminPage';
+import { RegistrationsPage } from '@/pages/RegistrationsPage';
 import { JoinPage } from '@/pages/JoinPage';
+import { PublicRegisterPage } from '@/pages/PublicRegisterPage';
 
 function Guard({ children }: { children: React.ReactNode }) {
   const auth = useAuthStore((s) => s.isAuthenticated);
@@ -24,6 +26,7 @@ export default function App() {
       <Routes>
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/join/:token" element={<JoinPage />} />
+        <Route path="/register/:slug" element={<PublicRegisterPage />} />
         <Route
           path="/coordinator"
           element={

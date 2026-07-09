@@ -16,6 +16,7 @@ import { metricsRouter, activityRouter, sheetsRouter } from './routes/other';
 import { certificatesRouter, verifyRouter } from './routes/certificates';
 import { inviteRouter } from './routes/invites';
 import { adminRouter } from './routes/admin';
+import { publicRegisterRouter, adminRegistrationRouter } from './routes/register';
 import { errorHandler } from './middleware/errorHandler';
 import { apiLimiter, authLimiter } from './middleware/rateLimiter';
 import { setupSocketHandlers } from './lib/socket';
@@ -76,6 +77,8 @@ app.use('/api/hackathons/:hackathonId/activity', activityRouter);
 app.use('/api/hackathons/:hackathonId/sheets', sheetsRouter);
 app.use('/api/invites', inviteRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/register', publicRegisterRouter);
+app.use('/api/hackathons/:hackathonId/registrations', adminRegistrationRouter);
 
 app.get('/health', async (_, res) => {
   try {

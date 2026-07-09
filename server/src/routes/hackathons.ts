@@ -22,6 +22,21 @@ hackathonsRouter.get('/', async (req: AuthRequest, res) => {
   } catch (err: any) { res.status(500).json({ error: 'Failed to fetch hackathons', details: err.message }); }
 });
 
+hackathonsRouter.get('/slug/:slug', async (req, res) => {
+  try {
+    const h = await prisma.hackathon.findUnique({
+      where: { slug: req.params.slug },
+      select: {
+        id: true, name: true, description: true, venue: true,
+        startDate: true, endDate: true,
+        minTeamSize: true, maxTeamSize: true,
+      },
+    });
+    if (!h) return res.status(404).json({ error: 'Not found' });
+    res.json(h);
+  } catch { res.status(500).json({ error: 'Failed to fetch hackathon' }); }
+});
+
 hackathonsRouter.get('/:id', async (req, res) => {
   try {
     const h = await prisma.hackathon.findUnique({ where: { id: req.params.id }, include: hackathonInclude });
