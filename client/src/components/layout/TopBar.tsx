@@ -10,20 +10,18 @@ export function TopBar() {
   const { setCommandOpen, setCreateHackathonOpen, setInviteOpen } = useUIStore();
   const { user } = useAuthStore();
   const isAdmin = user?.role === 'SUPER_ADMIN';
-  const isSubAdmin = user?.role === 'SUB_ADMIN' || user?.role === 'COORDINATOR';
+  const isSubAdmin = user?.role === 'SUB_ADMIN';
   const [switcherOpen, setSwitcherOpen] = useState(false);
 
   return (
     <>
       <header
         className="sticky top-0 z-30 flex items-center justify-between px-4 pt-safe"
-        style={{
-          height: 56,
-          background: 'rgba(9,9,9,0.92)',
-          borderBottom: '1px solid var(--border)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-        }}
+          style={{
+            height: 56,
+            background: 'var(--bg-card)',
+            borderBottom: '1px solid var(--border)',
+          }}
       >
         {/* Left: Logo + switcher */}
         <button

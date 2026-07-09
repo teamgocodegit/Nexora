@@ -89,14 +89,13 @@ export function DashboardPage() {
             className="flex items-center gap-1.5 flex-shrink-0 px-3 py-1 rounded-full"
             style={{
               background: activeHackathon.status === 'ACTIVE' ? 'var(--green-dim)' : 'var(--bg-elevated)',
-              border: `1px solid ${activeHackathon.status === 'ACTIVE' ? 'rgba(0,232,122,0.25)' : 'var(--border-strong)'}`,
+              border: `1px solid ${activeHackathon.status === 'ACTIVE' ? 'rgba(5,150,105,0.2)' : 'var(--border-strong)'}`,
             }}
           >
             <span
               className="w-1.5 h-1.5 rounded-full"
               style={{
                 background: statusColor,
-                boxShadow: activeHackathon.status === 'ACTIVE' ? '0 0 6px var(--green)' : 'none',
               }}
             />
             <span
@@ -114,28 +113,14 @@ export function DashboardPage() {
       </div>
 
       {/* Primary stat — big check-in */}
-      <div
-        className="card mb-4 p-5 relative overflow-hidden"
-        style={{
-          background: 'linear-gradient(135deg, #111111 0%, #161616 100%)',
-          border: '1px solid var(--border-strong)',
-        }}
-      >
-        {/* Background glow */}
-        <div
-          className="absolute right-0 top-0 w-48 h-48 pointer-events-none"
-          style={{
-            background: 'radial-gradient(circle, rgba(0,232,122,0.06) 0%, transparent 70%)',
-          }}
-        />
-
+      <div className="card mb-4 p-5">
         <div className="flex items-center justify-between mb-4">
           <div>
             <p className="text-label mb-1">Check-in progress</p>
             {metricsLoading ? (
               <div className="skeleton w-20 h-10 rounded-lg" />
             ) : (
-              <span className="metric-num" style={{ color: 'var(--green)' }}>
+              <span className="metric-num" style={{ color: 'var(--accent)' }}>
                 {metrics?.checkedInPercent ?? 0}%
               </span>
             )}
@@ -143,9 +128,9 @@ export function DashboardPage() {
           {!metricsLoading && metrics && (
             <div className="text-right">
               <p className="text-label mb-1">Teams</p>
-              <p className="metric-num-sm text-white">
+              <p className="metric-num-sm" style={{ color: 'var(--text)' }}>
                 {metrics.checkedIn}
-                <span className="text-muted" style={{ fontSize: '0.6em', color: 'var(--text-muted)', fontWeight: 400 }}>
+                <span style={{ fontSize: '0.6em', color: 'var(--text-muted)', fontWeight: 400 }}>
                   /{metrics.totalTeams}
                 </span>
               </p>
@@ -156,7 +141,7 @@ export function DashboardPage() {
         {/* Progress bar */}
         <div className="progress-track mb-5">
           <div
-            className="progress-fill progress-fill-green"
+            className="progress-fill progress-fill-accent"
             style={{ width: `${metrics?.checkedInPercent ?? 0}%` }}
           />
         </div>
@@ -179,7 +164,7 @@ export function DashboardPage() {
               <div
                 key={s.label}
                 className="text-center py-2 px-1 rounded-xl"
-                style={{ background: 'rgba(255,255,255,0.03)' }}
+                style={{ background: 'var(--bg-elevated)' }}
               >
                 <p
                   className="font-display font-bold"
@@ -212,11 +197,11 @@ export function DashboardPage() {
           <div className="card p-4">
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center mb-3"
-              style={{ background: 'var(--purple-dim)' }}
+              style={{ background: 'var(--accent-dim)' }}
             >
-              <Activity className="w-4 h-4" style={{ color: 'var(--purple)' }} />
+              <Activity className="w-4 h-4" style={{ color: 'var(--accent)' }} />
             </div>
-            <p className="metric-num-sm" style={{ color: 'var(--purple)' }}>
+            <p className="metric-num-sm" style={{ color: 'var(--accent)' }}>
               {metrics.missing}
             </p>
             <p className="text-caption mt-1">Not checked in</p>
@@ -232,7 +217,7 @@ export function DashboardPage() {
         >
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
-            style={{ background: 'var(--green-dim)', border: '1px solid rgba(0,232,122,0.2)' }}
+            style={{ background: 'var(--green-dim)', border: '1px solid rgba(5,150,105,0.15)' }}
           >
             <UserCheck className="w-5 h-5" style={{ color: 'var(--green)' }} />
           </div>
@@ -246,7 +231,7 @@ export function DashboardPage() {
         >
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
-            style={{ background: 'var(--blue-dim)', border: '1px solid rgba(96,165,250,0.2)' }}
+            style={{ background: 'var(--blue-dim)', border: '1px solid rgba(37,99,235,0.15)' }}
           >
             <Users className="w-5 h-5" style={{ color: 'var(--blue)' }} />
           </div>
@@ -262,7 +247,7 @@ export function DashboardPage() {
             >
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
-                style={{ background: 'var(--orange-dim)', border: '1px solid rgba(251,146,60,0.2)' }}
+                style={{ background: 'var(--orange-dim)', border: '1px solid rgba(217,119,6,0.15)' }}
               >
                 <Send className="w-5 h-5" style={{ color: 'var(--orange)' }} />
               </div>
@@ -276,9 +261,9 @@ export function DashboardPage() {
             >
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
-                style={{ background: 'var(--purple-dim)', border: '1px solid rgba(167,139,250,0.2)' }}
+                style={{ background: 'var(--accent-dim)', border: '1px solid rgba(79,70,229,0.15)' }}
               >
-                <Link2 className="w-5 h-5" style={{ color: 'var(--purple)' }} />
+                <Link2 className="w-5 h-5" style={{ color: 'var(--accent)' }} />
               </div>
               <p className="text-title" style={{ marginBottom: 4 }}>Invite</p>
               <p className="text-caption">Add coordinators</p>
