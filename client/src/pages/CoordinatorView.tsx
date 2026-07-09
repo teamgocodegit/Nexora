@@ -70,7 +70,7 @@ export function CoordinatorView() {
                 Nexora
               </p>
               <p className="text-caption">
-                {user?.name} · Coordinator
+                {user?.name} · Sub Admin
               </p>
             </div>
           </div>

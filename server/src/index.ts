@@ -17,14 +17,21 @@ import { certificatesRouter, verifyRouter } from './routes/certificates';
 import { inviteRouter } from './routes/invites';
 import { adminRouter } from './routes/admin';
 import { errorHandler } from './middleware/errorHandler';
-import { apiLimiter } from './middleware/rateLimiter';
+import { apiLimiter, authLimiter } from './middleware/rateLimiter';
 import { setupSocketHandlers } from './lib/socket';
 import { logger } from './lib/logger';
 
 dotenv.config();
 
-if (!process.env.JWT_SECRET) {
-  throw new Error('JWT_SECRET environment variable is required. Copy server/.env.example to server/.env and set a secure secret.');
+const REQUIRED_ENV = ['JWT_SECRET', 'DATABASE_URL'];
+for (const envVar of REQUIRED_ENV) {
+  if (!process.env[envVar]) {
+    throw new Error(`${envVar} environment variable is required. Copy server/.env.example to server/.env and set a secure value.`);
+  }
+}
+
+if (process.env.JWT_SECRET === 'change-me-to-a-long-random-secret-min-32-chars-here!!') {
+  throw new Error('JWT_SECRET must be changed from the default placeholder value. Generate a secure random string.');
 }
 
 const app = express();
@@ -34,24 +41,27 @@ app.set('trust proxy', 1);
 
 export const io = new SocketServer(httpServer, {
   cors: {
-    origin: process.env.CLIENT_URL || true,
+    origin: process.env.CLIENT_URL || (process.env.NODE_ENV === 'production' ? false : true),
     credentials: true,
   },
 });
 
 const ALLOWED_ORIGINS = process.env.NODE_ENV === 'production'
   ? (process.env.CLIENT_URL || '').split(',').filter(Boolean)
-  : true;
+  : ['http://localhost:5173', 'http://localhost:4000'];
 
 app.use(helmet({
   contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false,
 }));
+
 app.use(cors({
   origin: ALLOWED_ORIGINS,
   credentials: true,
 }));
-app.use(express.json());
+
+app.use(express.json({ limit: '1mb' }));
 app.use('/api', apiLimiter);
+app.use('/api/auth/login', authLimiter);
 
 app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
 app.use('/api/certificates', verifyRouter);
@@ -75,6 +85,21 @@ app.get('/health', async (_, res) => {
     res.status(503).json({ status: 'error', db: 'disconnected', ts: new Date().toISOString() });
   }
 });
+
+app.get('/api/__info', (req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  const safe = (v: string | undefined) => v ? `${v.slice(0, 8)}…` : undefined;
+  res.json({
+    node: process.version,
+    env: process.env.NODE_ENV,
+    origins: ALLOWED_ORIGINS,
+    jwt: safe(process.env.JWT_SECRET),
+    db: process.env.DATABASE_URL?.includes('@') ? `${process.env.DATABASE_URL!.split('@')[0].split(':')[0]}@${process.env.DATABASE_URL!.split('@')[1]}` : undefined,
+  });
+});
+
 app.use((req, res) => res.status(404).json({ error: `Not found: ${req.method} ${req.path}` }));
 app.use(errorHandler);
 
@@ -82,7 +107,7 @@ setupSocketHandlers(io);
 
 const PORT = parseInt(process.env.PORT || '4000', 10);
 httpServer.listen(PORT, '0.0.0.0', () => {
-  logger.info(`🚀 Nexora server on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
+  logger.info(`Nexora server on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
 });
 
 export default app;
