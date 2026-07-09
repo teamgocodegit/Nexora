@@ -12,6 +12,13 @@ export interface Hackathon {
   status: 'DRAFT' | 'ACTIVE' | 'ENDED';
   mode: 'PREDEFINED' | 'ON_SPOT';
   maxTeams?: number;
+  slug?: string;
+  registrationOpen?: string;
+  registrationDeadline?: string;
+  minTeamSize: number;
+  maxTeamSize: number;
+  approvalRequired: boolean;
+  waitlistEnabled: boolean;
   createdAt: string;
   _count?: { teams: number };
 }

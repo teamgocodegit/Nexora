@@ -51,6 +51,7 @@ export default function App() {
           <Route path="messages" element={<MessagesPage />} />
           <Route path="certificates" element={<CertificatesPage />} />
           <Route path="admin" element={<AdminPage />} />
+          <Route path="registrations" element={<RegistrationsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, UserCheck, MessageSquare, Award, Zap,
-  ChevronDown, Plus, LogOut, Loader2, Check, Link2, Shield,
+  ChevronDown, Plus, LogOut, Loader2, Check, Link2, Shield, ClipboardList,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useHackathonStore, Hackathon } from '@/store/hackathonStore';
@@ -13,6 +13,7 @@ import { disconnectSocket } from '@/lib/socket';
 const SUPER_ADMIN_NAV = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { to: '/hackathons', label: 'Hackathons', icon: Zap },
+  { to: '/registrations', label: 'Registrations', icon: ClipboardList },
   { to: '/teams', label: 'Teams', icon: Users },
   { to: '/checkin', label: 'Check-in', icon: UserCheck },
   { to: '/messages', label: 'Messages', icon: MessageSquare },
