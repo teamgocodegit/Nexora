@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, UserCheck, MessageSquare, Award, Zap,
   ChevronDown, Plus, LogOut, Loader2, Check, Link2, Shield, ClipboardList,
-  DoorOpen, Radio,
+  DoorOpen, Radio, Calendar, Activity,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useHackathonStore, Hackathon } from '@/store/hackathonStore';
@@ -17,6 +17,8 @@ const SUPER_ADMIN_NAV = [
   { to: '/registrations', label: 'Registrations', icon: ClipboardList },
   { to: '/teams', label: 'Teams', icon: Users },
   { to: '/rooms', label: 'Rooms', icon: DoorOpen },
+  { to: '/milestones', label: 'Milestones', icon: Calendar },
+  { to: '/automations', label: 'Automations', icon: Activity },
   { to: '/operations', label: 'Live Ops', icon: Radio },
   { to: '/checkin', label: 'Check-in', icon: UserCheck },
   { to: '/messages', label: 'Messages', icon: MessageSquare },

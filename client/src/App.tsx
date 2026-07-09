@@ -16,6 +16,9 @@ import { JoinPage } from '@/pages/JoinPage';
 import { PublicRegisterPage } from '@/pages/PublicRegisterPage';
 import { RoomsPage } from '@/pages/RoomsPage';
 import { LiveOpsPage } from '@/pages/LiveOpsPage';
+import { AutomationsPage } from '@/pages/AutomationsPage';
+import { MilestonesPage } from '@/pages/MilestonesPage';
+import { CertificateVerifyPage } from '@/pages/CertificateVerifyPage';
 
 function Guard({ children }: { children: React.ReactNode }) {
   const auth = useAuthStore((s) => s.isAuthenticated);
@@ -29,6 +32,7 @@ export default function App() {
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/join/:token" element={<JoinPage />} />
         <Route path="/register/:slug" element={<PublicRegisterPage />} />
+        <Route path="/verify/:certificateId" element={<CertificateVerifyPage />} />
         <Route
           path="/coordinator"
           element={
@@ -56,6 +60,8 @@ export default function App() {
           <Route path="registrations" element={<RegistrationsPage />} />
           <Route path="rooms" element={<RoomsPage />} />
           <Route path="operations" element={<LiveOpsPage />} />
+          <Route path="automations" element={<AutomationsPage />} />
+          <Route path="milestones" element={<MilestonesPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

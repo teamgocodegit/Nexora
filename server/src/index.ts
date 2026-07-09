@@ -18,6 +18,7 @@ import { inviteRouter } from './routes/invites';
 import { adminRouter } from './routes/admin';
 import { publicRegisterRouter, adminRegistrationRouter } from './routes/register';
 import { roomsRouter } from './routes/rooms';
+import { automationsRouter, milestonesRouter } from './routes/automations';
 import { errorHandler } from './middleware/errorHandler';
 import { apiLimiter, authLimiter } from './middleware/rateLimiter';
 import { setupSocketHandlers } from './lib/socket';
@@ -81,6 +82,8 @@ app.use('/api/admin', adminRouter);
 app.use('/api/register', publicRegisterRouter);
 app.use('/api/hackathons/:hackathonId/registrations', adminRegistrationRouter);
 app.use('/api/hackathons/:hackathonId/rooms', roomsRouter);
+app.use('/api/hackathons/:hackathonId/automations', automationsRouter);
+app.use('/api/hackathons/:hackathonId/milestones', milestonesRouter);
 
 app.get('/health', async (_, res) => {
   try {
