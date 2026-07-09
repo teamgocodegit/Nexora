@@ -1,6 +1,6 @@
 import type { TeamStatus } from '@/store/teamsStore';
 import { useState, useEffect, useRef } from 'react';
-import { Search, UserCheck, CheckCircle2, XCircle, QrCode, ScanLine, Zap } from 'lucide-react';
+import { Search, UserCheck, CheckCircle2, XCircle, QrCode, ScanLine } from 'lucide-react';
 import { useTeamsStore, Team } from '@/store/teamsStore';
 import { useHackathonStore } from '@/store/hackathonStore';
 import { useUIStore } from '@/store/uiStore';
