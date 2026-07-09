@@ -110,6 +110,26 @@ teamsRouter.get(
   }
 );
 
+// ✅ GET CHECKED-IN TEAMS
+teamsRouter.get(
+  '/checked-in',
+  async (req: Request<Params> & AuthRequest, res: Response) => {
+    try {
+      const teams = await prisma.team.findMany({
+        where: {
+          hackathonId: req.params.hackathonId,
+          status: 'CHECKED_IN',
+        },
+        include: teamInclude,
+        orderBy: { checkInTime: 'desc' },
+      });
+      res.json(teams.map(mapTeam));
+    } catch {
+      res.status(500).json({ error: 'Failed to fetch checked-in teams' });
+    }
+  }
+);
+
 // ✅ GET ONE TEAM
 teamsRouter.get(
   '/:id',

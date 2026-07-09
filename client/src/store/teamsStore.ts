@@ -19,6 +19,8 @@ export interface Participant {
 export interface Team {
   id: string;
   hackathonId: string;
+  teamId?: string;
+  qrToken?: string;
   name: string;
   status: TeamStatus;
   room?: string;
@@ -28,6 +30,7 @@ export interface Team {
   notes?: string;
   leaderPhone?: string;
   checkInTime?: string;
+  checkInBy?: string;
   submissionTime?: string;
   coordinatorId?: string;
   coordinator?: { id: string; name: string } | null;

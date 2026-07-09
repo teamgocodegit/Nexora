@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Phone, UserCheck, RefreshCw, LogOut, Zap, Users } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
+import { Phone, UserCheck, RefreshCw, LogOut, Zap, Users, Search, QrCode, X } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useTeamsStore, Team } from '@/store/teamsStore';
 import { useHackathonStore } from '@/store/hackathonStore';
@@ -15,6 +15,20 @@ export function CoordinatorView() {
   const { toast } = useUIStore();
   const navigate = useNavigate();
   const [checking, setChecking] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [showQrScanner, setShowQrScanner] = useState(false);
+
+  const filteredTeams = useMemo(() => {
+    if (!search.trim()) return teams;
+    const q = search.toLowerCase();
+    return teams.filter(
+      (t) =>
+        t.name.toLowerCase().includes(q) ||
+        t.room?.toLowerCase().includes(q) ||
+        t.teamId?.toLowerCase().includes(q) ||
+        t.participants.some((p) => p.name.toLowerCase().includes(q))
+    );
+  }, [teams, search]);
 
   useEffect(() => {
     fetchHackathons().then(() => {
@@ -104,13 +118,40 @@ export function CoordinatorView() {
         )}
       </header>
 
-      {/* Stats bar */}
-      {teams.length > 0 && (
-        <div
-          className="px-4 py-3 flex items-center gap-3"
-          style={{ background: 'var(--bg-card)', borderBottom: '1px solid var(--border)' }}
+      {/* Search + stats bar */}
+      <div
+        className="px-4 py-3 flex items-center gap-3"
+        style={{ background: 'var(--bg-card)', borderBottom: '1px solid var(--border)' }}
+      >
+        <div className="relative flex-1">
+          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search teams…"
+            className="input w-full"
+            style={{ paddingLeft: 32, height: 36, fontSize: 13 }}
+          />
+        </div>
+        <button
+          onClick={() => setShowQrScanner(true)}
+          className="btn btn-ghost btn-icon btn-sm"
+          title="Scan QR code"
         >
-          <div className="flex items-center gap-2 flex-1">
+          <QrCode className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => { if (activeHackathon) fetchTeams(activeHackathon.id); }}
+          className="btn btn-ghost btn-icon btn-sm"
+          title="Refresh"
+        >
+          <RefreshCw className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {teams.length > 0 && (
+        <div className="px-4 py-2 flex items-center gap-3" style={{ borderBottom: '1px solid var(--border)' }}>
+          <div className="flex items-center gap-2">
             <div
               className="w-2 h-2 rounded-full"
               style={{ background: 'var(--green)', boxShadow: '0 0 6px var(--green)' }}
@@ -119,30 +160,27 @@ export function CoordinatorView() {
               {checkedCount}/{teams.length} checked in
             </p>
           </div>
-          <button
-            onClick={() => activeHackathon && fetchTeams(activeHackathon.id)}
-            className="btn btn-ghost btn-icon btn-sm"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-          </button>
+          <p className="text-caption ml-auto">{filteredTeams.length} showing</p>
         </div>
       )}
 
       {/* Teams list */}
       <div className="px-4 pt-4 pb-24 space-y-3">
         <p className="text-label mb-1">
-          My Teams ({teams.length})
+          {search.trim() ? 'Results' : 'Assigned Teams'} ({filteredTeams.length})
         </p>
 
-        {teams.length === 0 ? (
+        {filteredTeams.length === 0 ? (
           <div className="empty-state mt-8">
             <div className="empty-icon">
               <Users className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
             </div>
-            <p className="text-caption">No teams assigned to you yet</p>
+            <p className="text-caption">
+              {search.trim() ? 'No teams match your search' : 'No teams assigned to you yet'}
+            </p>
           </div>
         ) : (
-          teams.map((team) => (
+          filteredTeams.map((team) => (
             <div
               key={team.id}
               className="card p-4"
@@ -269,13 +307,60 @@ export function CoordinatorView() {
                   className="text-caption mt-3 px-3 py-2 rounded-lg truncate"
                   style={{ background: 'var(--bg-elevated)' }}
                 >
-                  🚀 {team.projectName}
+                  {team.projectName}
                 </p>
               )}
             </div>
           ))
         )}
       </div>
+      {/* QR Scanner modal */}
+      {showQrScanner && (
+        <>
+          <div className="overlay animate-fade-in" onClick={() => setShowQrScanner(false)} />
+          <div className="sheet animate-slide-up flex flex-col" style={{ maxHeight: '80vh' }}>
+            <div className="sheet-handle" />
+            <div className="flex items-center justify-between px-5 pb-4 border-b" style={{ borderColor: 'var(--border)' }}>
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'var(--accent-dim)' }}>
+                  <QrCode className="w-4.5 h-4.5" style={{ color: 'var(--accent)', width: 18, height: 18 }} />
+                </div>
+                <div>
+                  <h2 className="font-semibold" style={{ fontSize: 16 }}>Scan QR Code</h2>
+                  <p className="text-caption">Point camera at team QR code to check in</p>
+                </div>
+              </div>
+              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setShowQrScanner(false)}>
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex-1 flex flex-col items-center justify-center p-6">
+              <QrCode className="w-16 h-16 mb-4" style={{ color: 'var(--text-muted)' }} />
+              <p className="text-caption text-center max-w-xs">
+                Camera access will be requested. Point at a team's QR token or enter their team ID manually below.
+              </p>
+              <div className="flex gap-2 w-full mt-4">
+                <input
+                  placeholder="Enter team ID (e.g. NEX-ABC-001)"
+                  className="input flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const input = e.currentTarget.value.trim();
+                      const team = teams.find((t) => t.teamId?.toLowerCase() === input.toLowerCase());
+                      if (team) {
+                        handleCheckIn(team);
+                        setShowQrScanner(false);
+                      } else {
+                        toast('Team not found', 'error');
+                      }
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

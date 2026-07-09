@@ -14,6 +14,8 @@ import { AdminPage } from '@/pages/AdminPage';
 import { RegistrationsPage } from '@/pages/RegistrationsPage';
 import { JoinPage } from '@/pages/JoinPage';
 import { PublicRegisterPage } from '@/pages/PublicRegisterPage';
+import { RoomsPage } from '@/pages/RoomsPage';
+import { LiveOpsPage } from '@/pages/LiveOpsPage';
 
 function Guard({ children }: { children: React.ReactNode }) {
   const auth = useAuthStore((s) => s.isAuthenticated);
@@ -52,6 +54,8 @@ export default function App() {
           <Route path="certificates" element={<CertificatesPage />} />
           <Route path="admin" element={<AdminPage />} />
           <Route path="registrations" element={<RegistrationsPage />} />
+          <Route path="rooms" element={<RoomsPage />} />
+          <Route path="operations" element={<LiveOpsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
