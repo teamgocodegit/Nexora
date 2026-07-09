@@ -33,7 +33,7 @@ export function Sidebar() {
   const { setCreateHackathonOpen, setInviteOpen } = useUIStore();
   const navigate = useNavigate();
   const isAdmin = user?.role === 'SUPER_ADMIN';
-  const isSubAdmin = user?.role === 'SUB_ADMIN' || user?.role === 'COORDINATOR';
+  const isSubAdmin = user?.role === 'SUB_ADMIN';
   const navItems = useMemo(() => isAdmin ? SUPER_ADMIN_NAV : SUB_ADMIN_NAV, [isAdmin]);
   const [switcherOpen, setSwitcherOpen] = useState(false);
 
