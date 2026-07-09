@@ -53,7 +53,7 @@ export function CheckInPage() {
           ...l,
         ].slice(0, 20)
       );
-      toast(`✓ ${team.name}`, 'success');
+      toast(`${team.name} checked in`, 'success');
     } catch (e: any) {
       setLog((l) =>
         [{ team, success: false, msg: e.message, time: new Date() }, ...l].slice(0, 20)
@@ -77,13 +77,13 @@ export function CheckInPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-heading">Check-in</h1>
-          <p className="text-caption mt-0.5">Scan or search to check in teams</p>
+          <p className="text-caption mt-0.5">Search or scan to check in teams</p>
         </div>
         <div
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
           style={{
             background: 'var(--green-dim)',
-            border: '1px solid rgba(0,232,122,0.2)',
+            border: '1px solid rgba(5,150,105,0.2)',
           }}
         >
           <ScanLine className="w-3.5 h-3.5" style={{ color: 'var(--green)' }} />
@@ -92,18 +92,12 @@ export function CheckInPage() {
       </div>
 
       {/* Progress card */}
-      <div
-        className="card p-5 mb-5"
-        style={{
-          background: 'linear-gradient(135deg, #111111 0%, #141414 100%)',
-          border: '1px solid var(--border-strong)',
-        }}
-      >
+      <div className="card p-5 mb-5">
         <div className="flex items-center justify-between mb-1">
           <p className="font-medium" style={{ fontSize: 14 }}>Progress</p>
           <span
             className="font-display font-bold"
-            style={{ fontSize: 28, color: 'var(--green)', letterSpacing: '-0.04em' }}
+            style={{ fontSize: 28, color: 'var(--accent)', letterSpacing: '-0.04em' }}
           >
             {pct}%
           </span>
@@ -112,14 +106,14 @@ export function CheckInPage() {
           {checkedCount} of {teams.length} teams · {teams.length - checkedCount} remaining
         </p>
         <div className="progress-track">
-          <div className="progress-fill progress-fill-green" style={{ width: `${pct}%` }} />
+          <div className="progress-fill progress-fill-accent" style={{ width: `${pct}%` }} />
         </div>
       </div>
 
       {/* Search */}
       <div className="relative mb-3">
         <Search
-          className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 pointer-events-none"
+          className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
           style={{ color: 'var(--text-disabled)', width: 18, height: 18 }}
         />
         <input
@@ -158,8 +152,8 @@ export function CheckInPage() {
               onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--bg-card)')}
             >
               <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-display font-bold flex-shrink-0"
-                style={{ fontSize: 12, background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)' }}
+                className="w-9 h-9 rounded-xl flex items-center justify-center font-display font-bold flex-shrink-0"
+                style={{ fontSize: 12, background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)', color: 'var(--text-secondary)' }}
               >
                 {team.name[0]}
               </div>
