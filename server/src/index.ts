@@ -44,21 +44,25 @@ app.set('trust proxy', 1);
 
 export const io = new SocketServer(httpServer, {
   cors: {
-    origin: process.env.CLIENT_URL || (process.env.NODE_ENV === 'production' ? false : true),
+    origin: ALLOWED_ORIGINS.length > 0 ? ALLOWED_ORIGINS : (process.env.NODE_ENV === 'production' ? '*' : true),
     credentials: true,
   },
 });
 
-const ALLOWED_ORIGINS = process.env.NODE_ENV === 'production'
-  ? (process.env.CLIENT_URL || '').split(',').filter(Boolean)
-  : ['http://localhost:5173', 'http://localhost:4000'];
+const CLIENT_URL = process.env.CLIENT_URL || '';
+const ALLOWED_ORIGINS = CLIENT_URL.split(',').filter(Boolean);
 
 app.use(helmet({
   contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false,
 }));
 
 app.use(cors({
-  origin: ALLOWED_ORIGINS,
+  origin(origin, cb) {
+    if (!origin || process.env.NODE_ENV !== 'production') return cb(null, true);
+    if (ALLOWED_ORIGINS.length === 0) return cb(null, origin);
+    if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    cb(null, false);
+  },
   credentials: true,
 }));
 
