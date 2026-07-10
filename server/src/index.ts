@@ -42,15 +42,15 @@ const httpServer = createServer(app);
 
 app.set('trust proxy', 1);
 
+const CLIENT_URL = process.env.CLIENT_URL || '';
+const ALLOWED_ORIGINS = CLIENT_URL.split(',').filter(Boolean);
+
 export const io = new SocketServer(httpServer, {
   cors: {
     origin: ALLOWED_ORIGINS.length > 0 ? ALLOWED_ORIGINS : (process.env.NODE_ENV === 'production' ? '*' : true),
     credentials: true,
   },
 });
-
-const CLIENT_URL = process.env.CLIENT_URL || '';
-const ALLOWED_ORIGINS = CLIENT_URL.split(',').filter(Boolean);
 
 app.use(helmet({
   contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false,
