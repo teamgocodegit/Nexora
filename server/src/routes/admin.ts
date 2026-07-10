@@ -108,19 +108,20 @@ adminRouter.patch('/:adminId', requireSuperAdmin, async (req: AuthRequest, res) 
     return res.status(403).json({ error: 'Cannot delete a Super Admin' });
   }
 
-  await prisma.coordinatorAssignment.deleteMany({ where: { userId: req.params.adminId } });
-  await prisma.user.delete({ where: { id: req.params.adminId } });
+  try {
+    await prisma.coordinatorAssignment.deleteMany({ where: { userId: req.params.adminId } });
+    await prisma.user.delete({ where: { id: req.params.adminId } });
 
-  await prisma.activityLog.create({
-    data: {
-      action: `Sub Admin "${user.name}" deleted by ${req.user!.name}`,
-      hackathonId: 'unknown',
-      actorId: req.user!.id,
-    },
-  });
+    await prisma.activityLog.create({
+      data: {
+        action: `Sub Admin "${user.name}" deleted by ${req.user!.name}`,
+        hackathonId: 'unknown',
+        actorId: req.user!.id,
+      },
+    });
 
-  res.json({ success: true });
-} catch {
-  res.status(500).json({ error: 'Failed to delete admin' });
-}
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to delete admin' });
+  }
 });
