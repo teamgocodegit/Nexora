@@ -32,7 +32,7 @@ interface HackathonState {
   setActiveHackathon: (h: Hackathon) => void;
   createHackathon: (data: Partial<Hackathon>) => Promise<Hackathon>;
   updateHackathon: (id: string, data: Partial<Hackathon>) => Promise<void>;
-  deleteHackathon: (id: string) => Promise<void>;
+  deleteHackathon: (id: string, confirm?: string) => Promise<{ success: boolean; note?: string; expected?: string; impact?: any }>;
 }
 
 export const useHackathonStore = create<HackathonState>()(
@@ -82,15 +82,18 @@ export const useHackathonStore = create<HackathonState>()(
         }));
       },
 
-      deleteHackathon: async (id) => {
-        await api.delete(`/hackathons/${id}`);
-        set((s) => ({
-          hackathons: s.hackathons.filter((h) => h.id !== id),
-          activeHackathon:
-            s.activeHackathon?.id === id
-              ? s.hackathons.find((h) => h.id !== id) ?? null
-              : s.activeHackathon,
-        }));
+      deleteHackathon: async (id: string, confirm?: string) => {
+        const result = await api.delete<{ success: boolean; note?: string; expected?: string; impact?: any }>(`/hackathons/${id}`, { data: { confirm } });
+        if (result.success) {
+          set((s) => ({
+            hackathons: s.hackathons.filter((h) => h.id !== id),
+            activeHackathon:
+              s.activeHackathon?.id === id
+                ? s.hackathons.find((h) => h.id !== id) ?? null
+                : s.activeHackathon,
+          }));
+        }
+        return result;
       },
     }),
     {

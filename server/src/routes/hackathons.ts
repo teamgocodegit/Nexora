@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
-import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth';
+import { authenticate, requireAdmin, requireSuperAdmin, AuthRequest } from '../middleware/auth';
+import { logActivity } from '../services/reliability/activityLog.service';
 
 export const hackathonsRouter = Router();
 hackathonsRouter.use(authenticate);
@@ -62,7 +63,46 @@ hackathonsRouter.patch('/:id', requireAdmin, async (req, res) => {
   } catch { res.status(500).json({ error: 'Failed to update hackathon' }); }
 });
 
-hackathonsRouter.delete('/:id', requireAdmin, async (req, res) => {
-  try { await prisma.hackathon.delete({ where: { id: req.params.id } }); res.json({ success: true }); }
-  catch { res.status(500).json({ error: 'Failed to delete hackathon' }); }
+hackathonsRouter.delete('/:id', requireSuperAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { confirm } = req.body || {};
+    const hackathon = await prisma.hackathon.findUnique({
+      where: { id: req.params.id },
+      include: { _count: { select: { teams: true, rooms: true, registrations: true, certificates: true } } },
+    });
+    if (!hackathon) return res.status(404).json({ error: 'Hackathon not found' });
+
+    const confirmStr = `HACKATHON-${hackathon.name.toUpperCase().replace(/\s+/g, '-').slice(0, 40)}`;
+    if (confirm !== confirmStr) {
+      return res.status(400).json({
+        error: 'Type-to-confirm required',
+        expected: confirmStr,
+        impact: {
+          teams: hackathon._count.teams,
+          rooms: hackathon._count.rooms,
+          registrations: hackathon._count.registrations,
+          certificates: hackathon._count.certificates,
+        },
+      });
+    }
+
+    const now = new Date();
+    await prisma.$transaction([
+      prisma.team.updateMany({ where: { hackathonId: req.params.id, deletedAt: null }, data: { deletedAt: now, deletedById: req.user!.id, deletionReason: 'Hackathon deleted' } }),
+      prisma.participant.updateMany({ where: { team: { hackathonId: req.params.id }, deletedAt: null }, data: { deletedAt: now, deletedById: req.user!.id, deletionReason: 'Hackathon deleted' } }),
+      prisma.hackathon.update({ where: { id: req.params.id }, data: { archivedAt: now, archivedById: req.user!.id } }),
+    ]);
+
+    await logActivity({
+      action: `Hackathon deleted with type-to-confirm`,
+      hackathonId: req.params.id,
+      actorId: req.user!.id,
+      entityType: 'Hackathon',
+      entityId: req.params.id,
+    });
+
+    res.json({ success: true, note: 'Hackathon archived. All teams and participants soft-deleted.' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to delete hackathon' });
+  }
 });

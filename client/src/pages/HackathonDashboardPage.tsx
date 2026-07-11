@@ -81,13 +81,37 @@ export function HackathonDashboardPage() {
     }
   };
 
+  const [confirmText, setConfirmText] = useState('');
+  const [deleteImpact, setDeleteImpact] = useState<any>(null);
+  const [deleteError, setDeleteError] = useState('');
+
   const handleDelete = async () => {
     try {
-      await deleteHackathon(hackathon.id);
-      toast('Hackathon deleted', 'success');
-      navigate('/hackathons');
+      const result = await deleteHackathon(hackathon.id, confirmText);
+      if (result.success) {
+        toast('Hackathon archived. All data preserved.', 'success');
+        navigate('/hackathons');
+      }
     } catch (e: any) {
-      toast(e.message, 'error');
+      if (e.status === 400 && e.message.includes('Type-to-confirm')) {
+        const impact = deleteImpact;
+        setDeleteError(`Type HACKATHON-${hackathon.name.toUpperCase().replace(/\s+/g, '-').slice(0, 40)} to confirm`);
+      } else {
+        toast(e.message, 'error');
+      }
+    }
+  };
+
+  const startDelete = async () => {
+    try {
+      await api.delete<any>(`/hackathons/${hackathon.id}`, { data: { confirm: '' } });
+    } catch (e: any) {
+      if (e.status === 400 && e.data) {
+        setDeleteImpact(e.data.impact || { teams: 0, rooms: 0, registrations: 0, certificates: 0 });
+        setConfirmDelete(true);
+      } else {
+        toast(e.message, 'error');
+      }
     }
   };
 
@@ -367,24 +391,44 @@ export function HackathonDashboardPage() {
               Danger zone
             </p>
             {!confirmDelete ? (
-              <button onClick={() => setConfirmDelete(true)} className="btn btn-danger w-full">
+              <button onClick={startDelete} className="btn btn-danger w-full">
                 <Trash2 className="w-3.5 h-3.5" />
-                Delete hackathon
+                Archive & delete hackathon
               </button>
             ) : (
               <div
                 className="p-4 rounded-xl"
                 style={{ background: 'var(--red-dim)', border: '1px solid rgba(248,113,113,0.2)' }}
               >
-                <p className="font-semibold mb-3" style={{ fontSize: 14, color: 'var(--red)' }}>
-                  This will permanently delete all teams, messages, and data. Cannot be undone.
+                {deleteImpact && (
+                  <div className="mb-3 text-xs space-y-1" style={{ color: 'var(--red)' }}>
+                    <p className="font-semibold">Impact summary:</p>
+                    <p>Teams: {deleteImpact.teams} · Rooms: {deleteImpact.rooms}</p>
+                    <p>Registrations: {deleteImpact.registrations} · Certificates: {deleteImpact.certificates}</p>
+                  </div>
+                )}
+                <p className="font-semibold mb-2" style={{ fontSize: 14, color: 'var(--red)' }}>
+                  Type the confirmation string to archive
                 </p>
+                <p className="text-xs mb-2" style={{ color: 'var(--red)', opacity: 0.7 }}>
+                  Teams and participants will be soft-deleted. Recovery is possible via the Reliability Center.
+                </p>
+                <input
+                  type="text"
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                  placeholder={`Type HACKATHON-${hackathon.name.toUpperCase().replace(/\s+/g, '-').slice(0, 40)}`}
+                  className="input mb-2"
+                  style={{ background: 'var(--bg)', borderColor: 'var(--red)' }}
+                />
+                {deleteError && <p className="text-xs mb-2" style={{ color: 'var(--red)' }}>{deleteError}</p>}
                 <div className="flex gap-2">
                   <button onClick={handleDelete} className="btn btn-danger flex-1">
-                    Yes, delete everything
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Confirm archive
                   </button>
                   <button
-                    onClick={() => setConfirmDelete(false)}
+                    onClick={() => { setConfirmDelete(false); setConfirmText(''); setDeleteError(''); }}
                     className="btn btn-secondary flex-1"
                   >
                     Cancel

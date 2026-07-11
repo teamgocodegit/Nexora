@@ -23,6 +23,7 @@ import { RegistrationDataHub } from '@/pages/RegistrationDataHub';
 import { EmailCampaignsPage } from '@/pages/EmailCampaignsPage';
 import { EmailComposerPage } from '@/pages/EmailComposerPage';
 import { EmailCampaignDetailPage } from '@/pages/EmailCampaignDetailPage';
+import { ReliabilityCenterPage } from '@/pages/ReliabilityCenterPage';
 
 function Guard({ children }: { children: React.ReactNode }) {
   const auth = useAuthStore((s) => s.isAuthenticated);
@@ -70,6 +71,7 @@ export default function App() {
           <Route path="email" element={<EmailCampaignsPage />} />
           <Route path="email/composer" element={<EmailComposerPage />} />
           <Route path="email/:id" element={<EmailCampaignDetailPage />} />
+          <Route path="reliability" element={<ReliabilityCenterPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -21,6 +21,7 @@ import { roomsRouter } from './routes/rooms';
 import { automationsRouter, milestonesRouter } from './routes/automations';
 import { importRouter } from './routes/import';
 import { emailRouter } from './routes/email';
+import { reliabilityRouter } from './routes/reliability';
 import { errorHandler } from './middleware/errorHandler';
 import { apiLimiter, authLimiter } from './middleware/rateLimiter';
 import { setupSocketHandlers } from './lib/socket';
@@ -92,6 +93,7 @@ app.use('/api/hackathons/:hackathonId/automations', automationsRouter);
 app.use('/api/hackathons/:hackathonId/milestones', milestonesRouter);
 app.use('/api/hackathons/:hackathonId/import', importRouter);
 app.use('/api/hackathons/:hackathonId/email', emailRouter);
+app.use('/api/hackathons/:hackathonId/reliability', reliabilityRouter);
 
 app.get('/health', async (_, res) => {
   try {

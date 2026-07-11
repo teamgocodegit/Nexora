@@ -24,6 +24,7 @@ const SUPER_ADMIN_NAV = [
   { to: '/checkin', label: 'Check-in', icon: UserCheck },
   { to: '/messages', label: 'Messages', icon: MessageSquare },
   { to: '/email', label: 'Email', icon: Send },
+  { to: '/reliability', label: 'Reliability', icon: Shield },
   { to: '/certificates', label: 'Certificates', icon: Award },
   { to: '/admin', label: 'Admins', icon: Shield },
 ];

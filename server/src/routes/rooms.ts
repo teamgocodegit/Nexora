@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { authenticate, requireSuperAdmin, AuthRequest } from '../middleware/auth';
 import { io } from '../index';
+import { softDeleteRoom } from '../services/reliability/softDelete.service';
+import { logActivity } from '../services/reliability/activityLog.service';
 import { emitToHackathon } from '../lib/socket';
 import { logger } from '../lib/logger';
 
@@ -115,23 +117,22 @@ roomsRouter.patch('/:roomId', requireSuperAdmin, async (req: AuthRequest, res) =
 
 roomsRouter.delete('/:roomId', requireSuperAdmin, async (req: AuthRequest, res) => {
   try {
-    const room = await prisma.room.findUnique({ where: { id: req.params.roomId } });
-    if (!room) return res.status(404).json({ error: 'Room not found' });
+    const { reason } = req.body || {};
+    const result = await softDeleteRoom(req.params.roomId, req.params.hackathonId, req.user!.id, reason);
 
-    await prisma.room.delete({ where: { id: req.params.roomId } });
-
-    await prisma.activityLog.create({
-      data: {
-        action: `Room "${room.name}" deleted`,
-        hackathonId: req.params.hackathonId,
-        actorId: req.user!.id,
-      },
-    }).catch((e) => logger.error(`[ActivityLog] ${e}`));
+    await logActivity({
+      action: `Room soft-deleted. ${result.teamsReassigned} teams reassigned.`,
+      hackathonId: req.params.hackathonId,
+      actorId: req.user!.id,
+      entityType: 'Room',
+      entityId: req.params.roomId,
+      metadata: { teamsReassigned: result.teamsReassigned, reason: reason || null },
+    });
 
     emitToHackathon(io, req.params.hackathonId, 'room:deleted', { id: req.params.roomId });
-    res.json({ success: true });
-  } catch {
-    res.status(500).json({ error: 'Failed to delete room' });
+    res.json({ success: true, teamsReassigned: result.teamsReassigned });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || 'Failed to delete room' });
   }
 });
 

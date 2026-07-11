@@ -5,7 +5,8 @@ const BASE = import.meta.env.VITE_API_URL || '/api';
 class ApiError extends Error {
   constructor(
     public status: number,
-    message: string
+    message: string,
+    public data?: Record<string, unknown>,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -33,7 +34,8 @@ async function request<T>(path: string, opts: RequestInit = {}): Promise<T> {
     const body = await res.json().catch(() => ({ error: 'Request failed' }));
     throw new ApiError(
       res.status,
-      body.error || body.message || `HTTP ${res.status}`
+      body.error || body.message || `HTTP ${res.status}`,
+      body
     );
   }
 
@@ -52,7 +54,11 @@ export const api = {
       method: 'PATCH',
       body: d != null ? JSON.stringify(d) : undefined,
     }),
-  delete: <T>(p: string) => request<T>(p, { method: 'DELETE' }),
+  delete: <T>(p: string, opts?: { data?: unknown }) =>
+    request<T>(p, {
+      method: 'DELETE',
+      body: opts?.data != null ? JSON.stringify(opts.data) : undefined,
+    }),
 };
 
 export { ApiError };

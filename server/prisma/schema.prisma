@@ -113,6 +113,23 @@ enum AutomationStatus {
   FAILED
 }
 
+enum SnapshotType {
+  MANUAL
+  PRE_EVENT
+  EVENT_START
+  MID_EVENT
+  PRE_JUDGING
+  PRE_RESULTS
+  FINAL
+  AUTOMATIC
+}
+
+enum SnapshotStatus {
+  CREATING
+  COMPLETED
+  FAILED
+}
+
 model User {
   id        String   @id @default(cuid())
   name      String
@@ -128,14 +145,19 @@ model User {
   lastActivityAt  DateTime?
   assignedRooms   String?
 
-  hackathons   Hackathon[]             @relation("HackathonCreator")
-  assignments  CoordinatorAssignment[]
-  sentMessages Message[]
-  activityLogs ActivityLog[]
-  inviteLinks  InviteLink[]
-  automations  Automation[]
-  importBatches ImportBatch[]
-  emailCampaigns EmailCampaign[]
+  hackathons          Hackathon[]             @relation("HackathonCreator")
+  archivedHackathons  Hackathon[]             @relation("HackathonArchiver")
+  assignments         CoordinatorAssignment[]
+  sentMessages        Message[]
+  activityLogs        ActivityLog[]
+  inviteLinks         InviteLink[]
+  automations         Automation[]
+  importBatches       ImportBatch[]
+  emailCampaigns      EmailCampaign[]
+  deletedTeams        Team[]                  @relation("TeamDeletion")
+  deletedParticipants Participant[]            @relation("ParticipantDeletion")
+  deletedRooms        Room[]                  @relation("RoomDeletion")
+  snapshots           HackathonSnapshot[]
 }
 
 model InviteLink {
@@ -166,6 +188,9 @@ model Hackathon {
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
+  archivedAt      DateTime?
+  archivedById    String?
+
   slug               String?    @unique
   registrationOpen   DateTime?
   registrationDeadline DateTime?
@@ -177,6 +202,7 @@ model Hackathon {
 
   createdBy   User   @relation("HackathonCreator", fields: [createdById], references: [id])
   createdById String
+  archivedBy  User?  @relation("HackathonArchiver", fields: [archivedById], references: [id])
 
   teams              Team[]
   rooms              Room[]
@@ -192,6 +218,7 @@ model Hackathon {
   automations        Automation[]
   milestones         EventMilestone[]
   emailCampaigns     EmailCampaign[]
+  snapshots          HackathonSnapshot[]
 }
 
 model Registration {
@@ -228,8 +255,14 @@ model Room {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
+  deletedAt       DateTime?
+  deletedById     String?
+  deletionReason  String?
+
   hackathon   Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
   hackathonId String
+
+  deletedBy User? @relation("RoomDeletion", fields: [deletedById], references: [id])
 
   @@unique([hackathonId, name])
 }
@@ -370,6 +403,10 @@ model Team {
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
+  deletedAt       DateTime?
+  deletedById     String?
+  deletionReason  String?
+
   hackathon   Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
   hackathonId String
 
@@ -379,6 +416,7 @@ model Team {
   problemStatement   ProblemStatement? @relation("TeamProblem", fields: [problemStatementId], references: [id])
   problemStatementId String?
 
+  deletedBy   User? @relation("TeamDeletion", fields: [deletedById], references: [id])
   participants      Participant[]
   messageRecipients MessageRecipient[]
   certificates      Certificate[]
@@ -394,8 +432,14 @@ model Participant {
   phone    String?
   isLeader Boolean @default(false)
 
+  deletedAt       DateTime?
+  deletedById     String?
+  deletionReason  String?
+
   team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
   teamId String
+
+  deletedBy User? @relation("ParticipantDeletion", fields: [deletedById], references: [id])
 }
 
 model ScoringCriteria {
@@ -509,6 +553,8 @@ model ActivityLog {
   metadata  Json?
   teamId    String?
   teamName  String?
+  entityType String?
+  entityId   String?
   timestamp DateTime @default(now())
 
   hackathon   Hackathon @relation(fields: [hackathonId], references: [id])
@@ -516,4 +562,39 @@ model ActivityLog {
 
   actor   User   @relation(fields: [actorId], references: [id])
   actorId String
+}
+
+model HackathonSnapshot {
+  id            String         @id @default(cuid())
+  type          SnapshotType   @default(MANUAL)
+  status        SnapshotStatus @default(CREATING)
+  schemaVersion Int            @default(1)
+  checksum      String?
+  data          Json?
+  recordCounts  Json?
+  size          Int?
+  failureReason String?
+  createdAt     DateTime       @default(now())
+  completedAt   DateTime?
+
+  hackathon   Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+  hackathonId String
+
+  createdBy   User   @relation(fields: [createdById], references: [id])
+  createdById String
+
+  @@index([hackathonId, type])
+  @@index([hackathonId, createdAt])
+}
+
+model BackupMetadata {
+  id                    String    @id @default("singleton")
+  backupProvider        String?
+  lastVerifiedBackup    DateTime?
+  lastRestoreTest       DateTime?
+  recoveryDocsUrl       String?
+  recoveryPointObjective Int?
+  recoveryTimeObjective  Int?
+  updatedAt             DateTime  @updatedAt
+  updatedBy             String?
 }

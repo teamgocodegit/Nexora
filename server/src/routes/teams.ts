@@ -8,6 +8,8 @@ import { io } from '../index';
 import { emitToHackathon } from '../lib/socket';
 import { getMetrics } from '../services/metricsService';
 import { logger } from '../lib/logger';
+import { softDeleteTeam } from '../services/reliability/softDelete.service';
+import { logActivity } from '../services/reliability/activityLog.service';
 
 export const teamsRouter = Router({ mergeParams: true });
 teamsRouter.use(authenticate);
@@ -378,24 +380,23 @@ teamsRouter.post(
   }
 );
 
-// ✅ DELETE (Super Admin only)
+// ✅ DELETE (Super Admin only) — soft delete
 teamsRouter.delete('/:id', requireSuperAdmin, async (req: Request<Params> & AuthRequest, res: Response) => {
   try {
-    const team = await prisma.team.findUnique({ where: { id: req.params.id } });
-    if (team) {
-      prisma.activityLog.create({
-        data: {
-          action: `Team "${team.name}" deleted by ${req.user!.name}`,
-          hackathonId: req.params.hackathonId,
-          actorId: req.user!.id,
-          teamId: team.id,
-          teamName: team.name,
-        },
-      }).catch((e) => logger.error(`[ActivityLog] ${e}`));
-    }
-    await prisma.team.delete({ where: { id: req.params.id } });
+    const teamId = req.params.id!;
+    const { reason } = req.body || {};
+    await softDeleteTeam(teamId, req.params.hackathonId!, req.user!.id, reason);
+    await logActivity({
+      action: `Team soft-deleted`,
+      hackathonId: req.params.hackathonId!,
+      actorId: req.user!.id,
+      entityType: 'Team',
+      entityId: teamId,
+      teamId,
+      metadata: { reason: reason || null },
+    });
     res.json({ success: true });
-  } catch {
-    res.status(500).json({ error: 'Failed to delete team' });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || 'Failed to delete team' });
   }
 });
