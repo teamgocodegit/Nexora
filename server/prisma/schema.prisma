@@ -84,6 +84,26 @@ enum AutomationTriggerType {
   EVENT_TRIGGERED
 }
 
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  QUEUED
+  PROCESSING
+  COMPLETED
+  PARTIAL
+  FAILED
+  CANCELLED
+}
+
+enum RecipientDeliveryStatus {
+  PENDING
+  PROCESSING
+  SENT
+  RETRYING
+  FAILED
+  CANCELLED
+}
+
 enum AutomationStatus {
   ACTIVE
   PAUSED
@@ -115,6 +135,7 @@ model User {
   inviteLinks  InviteLink[]
   automations  Automation[]
   importBatches ImportBatch[]
+  emailCampaigns EmailCampaign[]
 }
 
 model InviteLink {
@@ -170,6 +191,7 @@ model Hackathon {
   scoringCriteria    ScoringCriteria[]
   automations        Automation[]
   milestones         EventMilestone[]
+  emailCampaigns     EmailCampaign[]
 }
 
 model Registration {
@@ -231,6 +253,65 @@ model Automation {
 
   createdBy   User  @relation(fields: [createdById], references: [id])
   createdById String
+}
+
+model EmailCampaign {
+  id             String         @id @default(cuid())
+  name           String
+  subject        String
+  messageBody    String
+  bodyFormat     String         @default("html")
+  audienceType   String
+  audienceFilter Json?
+  status         CampaignStatus @default(DRAFT)
+  scheduledAt    DateTime?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  totalRecipients Int           @default(0)
+  pendingCount   Int            @default(0)
+  processingCount Int           @default(0)
+  sentCount      Int            @default(0)
+  failedCount    Int            @default(0)
+  cancelledCount Int            @default(0)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  hackathon   Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+  hackathonId String
+
+  createdBy   User  @relation(fields: [createdById], references: [id])
+  createdById String
+
+  recipients EmailRecipient[]
+
+  @@index([hackathonId, status])
+  @@index([scheduledAt, status])
+}
+
+model EmailRecipient {
+  id                   String                 @id @default(cuid())
+  email                String
+  recipientName        String?
+  personalizedSubject  String?
+  status               RecipientDeliveryStatus @default(PENDING)
+  attemptCount         Int                    @default(0)
+  nextRetryAt          DateTime?
+  providerMessageId    String?
+  lastError            String?
+  sentAt               DateTime?
+  failedAt             DateTime?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+
+  campaign   EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaignId String
+
+  participantId String?
+  teamId        String?
+
+  @@unique([campaignId, email])
+  @@index([status, nextRetryAt])
+  @@index([campaignId, status])
 }
 
 model EventMilestone {
