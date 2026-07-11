@@ -20,6 +20,7 @@ import { publicRegisterRouter, adminRegistrationRouter } from './routes/register
 import { roomsRouter } from './routes/rooms';
 import { automationsRouter, milestonesRouter } from './routes/automations';
 import { importRouter } from './routes/import';
+import { emailRouter } from './routes/email';
 import { errorHandler } from './middleware/errorHandler';
 import { apiLimiter, authLimiter } from './middleware/rateLimiter';
 import { setupSocketHandlers } from './lib/socket';
@@ -90,6 +91,7 @@ app.use('/api/hackathons/:hackathonId/rooms', roomsRouter);
 app.use('/api/hackathons/:hackathonId/automations', automationsRouter);
 app.use('/api/hackathons/:hackathonId/milestones', milestonesRouter);
 app.use('/api/hackathons/:hackathonId/import', importRouter);
+app.use('/api/hackathons/:hackathonId/email', emailRouter);
 
 app.get('/health', async (_, res) => {
   try {
@@ -118,6 +120,11 @@ app.use((req, res) => res.status(404).json({ error: `Not found: ${req.method} ${
 app.use(errorHandler);
 
 setupSocketHandlers(io);
+
+const { startEmailWorker } = require('./services/email/worker.service');
+const { startScheduler } = require('./services/email/scheduler.service');
+startEmailWorker();
+startScheduler();
 
 const PORT = parseInt(process.env.PORT || '4000', 10);
 httpServer.listen(PORT, '0.0.0.0', () => {

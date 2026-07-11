@@ -20,6 +20,9 @@ import { AutomationsPage } from '@/pages/AutomationsPage';
 import { MilestonesPage } from '@/pages/MilestonesPage';
 import { CertificateVerifyPage } from '@/pages/CertificateVerifyPage';
 import { RegistrationDataHub } from '@/pages/RegistrationDataHub';
+import { EmailCampaignsPage } from '@/pages/EmailCampaignsPage';
+import { EmailComposerPage } from '@/pages/EmailComposerPage';
+import { EmailCampaignDetailPage } from '@/pages/EmailCampaignDetailPage';
 
 function Guard({ children }: { children: React.ReactNode }) {
   const auth = useAuthStore((s) => s.isAuthenticated);
@@ -64,6 +67,9 @@ export default function App() {
           <Route path="automations" element={<AutomationsPage />} />
           <Route path="milestones" element={<MilestonesPage />} />
           <Route path="data-hub" element={<RegistrationDataHub />} />
+          <Route path="email" element={<EmailCampaignsPage />} />
+          <Route path="email/composer" element={<EmailComposerPage />} />
+          <Route path="email/:id" element={<EmailCampaignDetailPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

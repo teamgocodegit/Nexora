@@ -33,7 +33,7 @@ export function createResendProvider(): EmailProvider {
           ];
         }
 
-        const result = await resend.emails.send(payload);
+        const result = await resend.emails.send(payload as any);
 
         if (result.error) {
           return { success: false, error: result.error.message };
