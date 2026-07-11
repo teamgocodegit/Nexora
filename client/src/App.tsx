@@ -19,6 +19,7 @@ import { LiveOpsPage } from '@/pages/LiveOpsPage';
 import { AutomationsPage } from '@/pages/AutomationsPage';
 import { MilestonesPage } from '@/pages/MilestonesPage';
 import { CertificateVerifyPage } from '@/pages/CertificateVerifyPage';
+import { RegistrationDataHub } from '@/pages/RegistrationDataHub';
 
 function Guard({ children }: { children: React.ReactNode }) {
   const auth = useAuthStore((s) => s.isAuthenticated);
@@ -62,6 +63,7 @@ export default function App() {
           <Route path="operations" element={<LiveOpsPage />} />
           <Route path="automations" element={<AutomationsPage />} />
           <Route path="milestones" element={<MilestonesPage />} />
+          <Route path="data-hub" element={<RegistrationDataHub />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

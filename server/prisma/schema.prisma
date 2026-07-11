@@ -114,6 +114,7 @@ model User {
   activityLogs ActivityLog[]
   inviteLinks  InviteLink[]
   automations  Automation[]
+  importBatches ImportBatch[]
 }
 
 model InviteLink {
@@ -163,6 +164,7 @@ model Hackathon {
   messages           Message[]
   certificates       Certificate[]
   activityLogs       ActivityLog[]
+  importBatches      ImportBatch[]
   inviteLinks        InviteLink[]
   problemStatements  ProblemStatement[]
   scoringCriteria    ScoringCriteria[]
@@ -386,6 +388,37 @@ model Certificate {
 
   team   Team   @relation(fields: [teamId], references: [id])
   teamId String
+}
+
+model ImportBatch {
+  id                  String   @id @default(cuid())
+  originalFileName    String
+  fileType            String
+  selectedSheetName   String?
+  sourceType          String   @default("UPLOAD")
+  fileFingerprint     String?
+  totalRows           Int      @default(0)
+  validRows           Int      @default(0)
+  warningRows         Int      @default(0)
+  errorRows           Int      @default(0)
+  importedTeams       Int      @default(0)
+  importedParticipants Int     @default(0)
+  skippedRows         Int      @default(0)
+  status              String   @default("UPLOADED")
+  failureReason       String?
+  mappingConfig       Json?
+  importSummary       Json?
+  createdAt           DateTime @default(now())
+  completedAt         DateTime?
+
+  hackathon   Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+  hackathonId String
+
+  createdBy   User  @relation(fields: [createdById], references: [id])
+  createdById String
+
+  @@index([hackathonId, status])
+  @@index([createdById])
 }
 
 model ActivityLog {
