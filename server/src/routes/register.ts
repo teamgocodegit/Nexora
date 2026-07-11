@@ -73,7 +73,7 @@ publicRegisterRouter.post('/:slug', async (req, res) => {
     }
 
     const existingTeam = await prisma.team.findFirst({
-      where: { hackathonId: hackathon.id, name: { equals: teamName, mode: 'insensitive' } },
+      where: { hackathonId: hackathon.id, name: { equals: teamName, mode: 'insensitive' }, deletedAt: null },
     });
     if (existingTeam) {
       return res.status(409).json({ error: 'A team with this name is already registered.' });
@@ -95,7 +95,7 @@ publicRegisterRouter.post('/:slug', async (req, res) => {
 
     if (hackathon.maxTeams) {
       const acceptedCount = await prisma.team.count({
-        where: { hackathonId: hackathon.id },
+        where: { hackathonId: hackathon.id, deletedAt: null },
       });
       if (acceptedCount >= hackathon.maxTeams) {
         if (!hackathon.waitlistEnabled) {
@@ -126,7 +126,7 @@ publicRegisterRouter.post('/:slug', async (req, res) => {
     if (!hackathon.approvalRequired) {
       if (hackathon.maxTeams) {
         const acceptedCount = await prisma.team.count({
-          where: { hackathonId: hackathon.id },
+          where: { hackathonId: hackathon.id, deletedAt: null },
         });
         if (acceptedCount < hackathon.maxTeams) {
           status = 'ACCEPTED';
@@ -259,7 +259,7 @@ adminRegistrationRouter.get('/stats', requireSuperAdmin, async (req: AuthRequest
       prisma.registration.count({ where: { hackathonId, status: 'ACCEPTED' } }),
       prisma.registration.count({ where: { hackathonId, status: 'WAITLISTED' } }),
       prisma.registration.count({ where: { hackathonId, status: 'REJECTED' } }),
-      prisma.team.count({ where: { hackathonId } }),
+      prisma.team.count({ where: { hackathonId, deletedAt: null } }),
     ]);
     const hackathon = await prisma.hackathon.findUnique({
       where: { id: hackathonId },

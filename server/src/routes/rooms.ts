@@ -21,13 +21,13 @@ const createSchema = z.object({
 roomsRouter.get('/', async (req: AuthRequest, res) => {
   try {
     const rooms = await prisma.room.findMany({
-      where: { hackathonId: req.params.hackathonId },
+      where: { hackathonId: req.params.hackathonId, deletedAt: null },
       orderBy: { createdAt: 'asc' },
     });
 
     const teamCounts = await prisma.team.groupBy({
       by: ['room'],
-      where: { hackathonId: req.params.hackathonId, room: { not: null } },
+      where: { hackathonId: req.params.hackathonId, room: { not: null }, deletedAt: null },
       _count: true,
     });
 
@@ -58,7 +58,7 @@ roomsRouter.post('/', requireSuperAdmin, async (req: AuthRequest, res) => {
 
   try {
     const existing = await prisma.room.findFirst({
-      where: { hackathonId: req.params.hackathonId, name: parsed.data.name },
+      where: { hackathonId: req.params.hackathonId, name: parsed.data.name, deletedAt: null },
     });
     if (existing) {
       return res.status(409).json({ error: 'A room with this name already exists' });
@@ -151,7 +151,7 @@ roomsRouter.post('/:roomId/assign-teams', requireSuperAdmin, async (req: AuthReq
     if (!room) return res.status(404).json({ error: 'Room not found' });
 
     const currentCount = await prisma.team.count({
-      where: { hackathonId: req.params.hackathonId, room: room.name },
+      where: { hackathonId: req.params.hackathonId, room: room.name, deletedAt: null },
     });
 
     if (currentCount + parsed.data.teamIds.length > room.capacity) {

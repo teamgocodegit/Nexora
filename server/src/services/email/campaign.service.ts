@@ -35,13 +35,13 @@ export async function resolveAudience(
 ): Promise<AudienceResolution> {
   let teams: (Team & { participants: Participant[] })[] = [];
 
-  const teamFilter: Record<string, unknown> = { hackathonId };
+  const teamFilter: Record<string, unknown> = { hackathonId, deletedAt: null };
 
   switch (audienceType) {
     case 'ALL_TEAMS':
     case 'ALL_PARTICIPANTS':
       teams = await prisma.team.findMany({
-        where: { hackathonId },
+        where: { hackathonId, deletedAt: null },
         include: { participants: true },
       }) as (Team & { participants: Participant[] })[];
       break;

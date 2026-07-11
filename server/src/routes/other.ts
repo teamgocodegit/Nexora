@@ -42,7 +42,7 @@ sheetsRouter.post('/sync', requireAdmin, async (req: AuthRequest, res) => {
       const leaderPhone = phoneIdx >= 0 ? row[phoneIdx]?.trim() : undefined;
       const memberNames = memberIndices.map((i) => row[i]?.trim()).filter(Boolean);
       try {
-        const existing = await prisma.team.findFirst({ where: { hackathonId, name: teamName } });
+        const existing = await prisma.team.findFirst({ where: { hackathonId, name: teamName, deletedAt: null } });
         if (existing) { await prisma.team.update({ where: { id: existing.id }, data: { leaderPhone: leaderPhone || existing.leaderPhone } }); updated++; }
         else { await prisma.team.create({ data: { hackathonId, name: teamName, leaderPhone, participants: { create: memberNames.map((name, idx) => ({ name, isLeader: idx === 0, phone: idx === 0 ? leaderPhone : undefined })) } } }); created++; }
       } catch { skipped++; }

@@ -249,7 +249,7 @@ importRouter.post('/:batchId/validate', async (req: AuthRequest, res) => {
     });
 
     const existingTeamNames = await prisma.team.findMany({
-      where: { hackathonId },
+      where: { hackathonId, deletedAt: null },
       select: { name: true },
     }).then((teams) => teams.map((t) => t.name));
 
@@ -338,7 +338,7 @@ importRouter.post('/:batchId/import', async (req: AuthRequest, res) => {
     const normalization = normalizeRecord(mappedRecords, config.layout);
 
     const existingTeamNames = await prisma.team.findMany({
-      where: { hackathonId },
+      where: { hackathonId, deletedAt: null },
       select: { name: true },
     }).then((teams) => teams.map((t) => t.name));
 

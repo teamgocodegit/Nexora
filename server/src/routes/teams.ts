@@ -76,6 +76,7 @@ teamsRouter.get(
       const teams = await prisma.team.findMany({
         where: {
           hackathonId: req.params.hackathonId,
+          deletedAt: null,
           ...(status && VALID_STATUSES.includes(status as TeamStatus)
             ? { status: status as TeamStatus }
             : {}),
@@ -120,6 +121,7 @@ teamsRouter.get(
       const teams = await prisma.team.findMany({
         where: {
           hackathonId: req.params.hackathonId,
+          deletedAt: null,
           status: 'CHECKED_IN',
         },
         include: teamInclude,
@@ -141,6 +143,7 @@ teamsRouter.get(
         where: {
           id: req.params.id,
           hackathonId: req.params.hackathonId,
+          deletedAt: null,
         },
         include: teamInclude,
       });

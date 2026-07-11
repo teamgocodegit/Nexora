@@ -310,7 +310,7 @@ emailRouter.get('/templates/list', async (_req: AuthRequest, res) => {
 emailRouter.get('/rooms/list', async (req: AuthRequest, res) => {
   try {
     const rooms = await prisma.room.findMany({
-      where: { hackathonId: req.params.hackathonId },
+      where: { hackathonId: req.params.hackathonId, deletedAt: null },
       select: { id: true, name: true },
     });
     res.json(rooms);

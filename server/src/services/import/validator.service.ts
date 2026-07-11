@@ -36,7 +36,7 @@ export async function validateTeams(
   const allDuplicateTeams: string[] = [];
 
   const dbTeams = await prisma.team.findMany({
-    where: { hackathonId },
+    where: { hackathonId, deletedAt: null },
     select: { name: true, participants: { select: { email: true } } },
   });
   const dbTeamNames = new Set(dbTeams.map((t) => t.name.toLowerCase()));

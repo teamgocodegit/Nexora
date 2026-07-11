@@ -19,7 +19,7 @@ export async function generateCertificates(
   teamIds?: string[],
 ): Promise<CertGenerationResult> {
   const teams = await prisma.team.findMany({
-    where: teamIds ? { hackathonId, id: { in: teamIds } } : { hackathonId },
+    where: teamIds ? { hackathonId, id: { in: teamIds }, deletedAt: null } : { hackathonId, deletedAt: null },
     include: { participants: true },
   });
 
