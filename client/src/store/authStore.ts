@@ -7,6 +7,9 @@ export interface AuthUser {
   email?: string;
   phone?: string;
   role: 'SUPER_ADMIN' | 'SUB_ADMIN';
+  isActive: boolean;
+  lastLoginAt?: string;
+  createdAt: string;
 }
 
 interface AuthState {
@@ -14,6 +17,7 @@ interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   setAuth: (user: AuthUser, token: string) => void;
+  setUser: (user: AuthUser) => void;
   logout: () => void;
 }
 
@@ -24,6 +28,7 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       isAuthenticated: false,
       setAuth: (user, token) => set({ user, token, isAuthenticated: true }),
+      setUser: (user) => set({ user }),
       logout: () => set({ user: null, token: null, isAuthenticated: false }),
     }),
     { name: 'nexora-auth' }

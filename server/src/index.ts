@@ -25,7 +25,7 @@ import { reliabilityRouter } from './routes/reliability';
 import { operationsRouter } from './routes/operations';
 import { printRouter } from './routes/print';
 import { errorHandler } from './middleware/errorHandler';
-import { apiLimiter, authLimiter } from './middleware/rateLimiter';
+import { apiLimiter, authLimiter, passwordSetupLimiter } from './middleware/rateLimiter';
 import { setupSocketHandlers } from './lib/socket';
 import { startEmailWorker } from './services/email/worker.service';
 import { startScheduler } from './services/email/scheduler.service';
@@ -43,6 +43,10 @@ for (const envVar of REQUIRED_ENV) {
 
 if (process.env.JWT_SECRET === 'change-me-to-a-long-random-secret-min-32-chars-here!!') {
   throw new Error('JWT_SECRET must be changed from the default placeholder value. Generate a secure random string.');
+}
+
+if (process.env.NODE_ENV === 'production' && process.env.JWT_SECRET && process.env.JWT_SECRET.length < 32) {
+  throw new Error('JWT_SECRET must be at least 32 characters in production.');
 }
 
 const app = express();
@@ -66,9 +70,13 @@ app.use(helmet({
 
 app.use(cors({
   origin(origin, cb) {
-    if (!origin || process.env.NODE_ENV !== 'production') return cb(null, true);
+    if (!origin && process.env.NODE_ENV === 'production') return cb(null, true);
+    if (!origin) return cb(null, true);
     if (ALLOWED_ORIGINS.length === 0) return cb(null, origin);
-    if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    const isAllowed = ALLOWED_ORIGINS.some(
+      (allowed) => origin === allowed || origin.startsWith(allowed + '/') || origin.startsWith(allowed.replace(/\/$/, '')),
+    );
+    if (isAllowed) return cb(null, true);
     cb(null, false);
   },
   credentials: true,
@@ -77,6 +85,8 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use('/api', apiLimiter);
 app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/change-password', passwordSetupLimiter);
+app.use('/api/admin', passwordSetupLimiter);
 
 app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
 app.use('/api/certificates', verifyRouter);

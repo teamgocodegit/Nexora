@@ -6,6 +6,9 @@ export interface AuthUser {
   email?: string;
   phone?: string;
   role: UserRole;
+  isActive: boolean;
+  lastLoginAt?: string;
+  createdAt: string;
   token: string;
 }
 

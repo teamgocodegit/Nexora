@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
-import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth';
+import { authenticate, requireAdmin, requireHackathonAccess, AuthRequest } from '../middleware/auth';
 import { getMetrics } from '../services/metricsService';
 
 export const metricsRouter = Router({ mergeParams: true });
 metricsRouter.use(authenticate);
+metricsRouter.use(requireHackathonAccess);
 metricsRouter.get('/', async (req: AuthRequest, res) => {
   try { res.json(await getMetrics(req.params.hackathonId!)); }
   catch { res.status(500).json({ error: 'Failed to fetch metrics' }); }
@@ -12,6 +13,7 @@ metricsRouter.get('/', async (req: AuthRequest, res) => {
 
 export const activityRouter = Router({ mergeParams: true });
 activityRouter.use(authenticate);
+activityRouter.use(requireHackathonAccess);
 activityRouter.get('/', async (req: AuthRequest, res) => {
   try {
     const logs = await prisma.activityLog.findMany({ where: { hackathonId: req.params.hackathonId! }, include: { actor: { select: { id: true, name: true } } }, orderBy: { timestamp: 'desc' }, take: 100 });
@@ -21,6 +23,7 @@ activityRouter.get('/', async (req: AuthRequest, res) => {
 
 export const sheetsRouter = Router({ mergeParams: true });
 sheetsRouter.use(authenticate);
+sheetsRouter.use(requireHackathonAccess);
 sheetsRouter.post('/sync', requireAdmin, async (req: AuthRequest, res) => {
   const { sheetId, range = 'Sheet1!A:Z' } = req.body;
   if (!sheetId) return res.status(400).json({ error: 'sheetId required' });

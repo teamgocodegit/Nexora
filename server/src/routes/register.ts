@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { RegistrationStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { authenticate, requireSuperAdmin, AuthRequest } from '../middleware/auth';
+import { authenticate, requireSuperAdmin, requireHackathonAccess, AuthRequest } from '../middleware/auth';
 import { generateRegistrationId } from '../services/teamId.service';
 import { logger } from '../lib/logger';
 
@@ -223,6 +223,7 @@ async function acceptRegistration(registrationId: string, hackathonId: string) {
 
 export const adminRegistrationRouter = Router({ mergeParams: true });
 adminRegistrationRouter.use(authenticate);
+adminRegistrationRouter.use(requireHackathonAccess);
 
 adminRegistrationRouter.get('/', requireSuperAdmin, async (req: AuthRequest, res) => {
   try {

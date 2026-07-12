@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
-import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth';
+import { authenticate, requireAdmin, requireHackathonAccess, AuthRequest } from '../middleware/auth';
+import { inviteAcceptLimiter } from '../middleware/rateLimiter';
 import { logger } from '../lib/logger';
 
 export const inviteRouter = Router();
@@ -20,6 +21,15 @@ inviteRouter.post('/', authenticate, requireAdmin, async (req: AuthRequest, res)
   }
 
   const { hackathonId, expiresInDays, requireApproval } = parsed.data;
+
+  if (req.user?.role !== 'SUPER_ADMIN') {
+    const assignment = await prisma.coordinatorAssignment.findUnique({
+      where: { hackathonId_userId: { hackathonId, userId: req.user!.id } },
+    });
+    if (!assignment) {
+      return res.status(403).json({ error: 'You do not have access to this hackathon' });
+    }
+  }
 
   try {
     const hackathon = await prisma.hackathon.findUnique({ where: { id: hackathonId } });
@@ -100,7 +110,7 @@ inviteRouter.get('/:token', async (req, res) => {
 });
 
 /* ─── POST /invites/:token/accept ─── Accept invite ─── */
-inviteRouter.post('/:token/accept', authenticate, async (req: AuthRequest, res) => {
+inviteRouter.post('/:token/accept', inviteAcceptLimiter, authenticate, async (req: AuthRequest, res) => {
   try {
     const invite = await prisma.inviteLink.findUnique({
       where: { token: req.params.token },
