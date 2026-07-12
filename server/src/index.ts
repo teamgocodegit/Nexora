@@ -25,6 +25,8 @@ import { reliabilityRouter } from './routes/reliability';
 import { errorHandler } from './middleware/errorHandler';
 import { apiLimiter, authLimiter } from './middleware/rateLimiter';
 import { setupSocketHandlers } from './lib/socket';
+import { startEmailWorker } from './services/email/worker.service';
+import { startScheduler } from './services/email/scheduler.service';
 import { logger } from './lib/logger';
 
 dotenv.config();
@@ -123,8 +125,6 @@ app.use(errorHandler);
 
 setupSocketHandlers(io);
 
-const { startEmailWorker } = require('./services/email/worker.service');
-const { startScheduler } = require('./services/email/scheduler.service');
 startEmailWorker();
 startScheduler();
 

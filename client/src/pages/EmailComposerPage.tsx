@@ -34,6 +34,8 @@ const AUDIENCE_TYPES = [
   { value: 'SUBMITTED', label: 'Submitted Teams' },
   { value: 'ROOM_SPECIFIC', label: 'Teams in a Room' },
   { value: 'SELECTED_TEAMS', label: 'Selected Teams' },
+  { value: 'APPROVED_REGISTRATIONS', label: 'Approved Registrations' },
+  { value: 'REJECTED_REGISTRATIONS', label: 'Rejected Registrations' },
 ];
 
 const VARIABLES = [
@@ -246,7 +248,7 @@ export function EmailComposerPage() {
               <p className="text-label">Message Body (HTML)</p>
               {showVariables && (
                 <div className="flex gap-1 flex-wrap">
-                  {VARIABLES.slice(0, 5).map((v) => (
+                  {VARIABLES.map((v) => (
                     <button
                       key={v.var}
                       onClick={() => insertVariable(v.var)}

@@ -1,15 +1,24 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import rateLimit from 'express-rate-limit';
 import { prisma } from '../lib/prisma';
 import { authenticate, requireSuperAdmin, AuthRequest } from '../middleware/auth';
 import { createResendProvider } from '../services/email/resend.provider';
-import { renderTemplate, extractVariables, BUILTIN_TEMPLATES } from '../services/email/template.service';
+import { renderTemplate, extractVariables, BUILTIN_TEMPLATES, sanitizeHtml } from '../services/email/template.service';
 import { resolveAudience, buildTemplateContext, launchCampaign } from '../services/email/campaign.service';
 import { logger } from '../lib/logger';
 
 export const emailRouter = Router({ mergeParams: true });
 emailRouter.use(authenticate);
 emailRouter.use(requireSuperAdmin);
+
+const emailActionLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: { error: 'Too many email actions. Please slow down.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // GET /campaigns - List all campaigns
 emailRouter.get('/', async (req: AuthRequest, res) => {
@@ -79,14 +88,17 @@ emailRouter.post('/draft', async (req: AuthRequest, res) => {
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Invalid input', details: parsed.error.errors });
 
+  const sanitizedBody = sanitizeHtml(parsed.data.messageBody);
+  const sanitizedSubject = parsed.data.subject.replace(/<[^>]*>/g, '');
+
   try {
     const campaign = await prisma.emailCampaign.create({
       data: {
         hackathonId: req.params.hackathonId,
         createdById: req.user!.id,
         name: parsed.data.name,
-        subject: parsed.data.subject,
-        messageBody: parsed.data.messageBody,
+        subject: sanitizedSubject,
+        messageBody: sanitizedBody,
         bodyFormat: parsed.data.bodyFormat || 'html',
         audienceType: parsed.data.audienceType,
         audienceFilter: parsed.data.audienceFilter ? JSON.parse(JSON.stringify(parsed.data.audienceFilter)) : undefined,
@@ -111,7 +123,7 @@ emailRouter.post('/draft', async (req: AuthRequest, res) => {
 });
 
 // POST /:id/send-now - Launch campaign immediately
-emailRouter.post('/:id/send-now', async (req: AuthRequest, res) => {
+emailRouter.post('/:id/send-now', emailActionLimiter, async (req: AuthRequest, res) => {
   try {
     const result = await launchCampaign(req.params.hackathonId, req.params.id, req.user!.id);
 
@@ -183,7 +195,7 @@ emailRouter.post('/:id/cancel', async (req: AuthRequest, res) => {
 });
 
 // POST /test - Send test email
-emailRouter.post('/test', async (req: AuthRequest, res) => {
+emailRouter.post('/test', emailActionLimiter, async (req: AuthRequest, res) => {
   const schema = z.object({
     subject: z.string().min(1),
     messageBody: z.string().min(1),
@@ -194,8 +206,11 @@ emailRouter.post('/test', async (req: AuthRequest, res) => {
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Invalid input', details: parsed.error.errors });
 
+  const sanitizedBody = sanitizeHtml(parsed.data.messageBody);
+  const sanitizedSubject = parsed.data.subject.replace(/<[^>]*>/g, '');
+
   try {
-    const html = renderTemplate(parsed.data.messageBody, {
+    const html = renderTemplate(sanitizedBody, {
       participantName: parsed.data.testName || 'Test User',
       teamName: 'Test Team',
       teamId: 'NEX-TEST-001',
@@ -213,9 +228,13 @@ emailRouter.post('/test', async (req: AuthRequest, res) => {
     const provider = createResendProvider();
     const result = await provider.send({
       to: parsed.data.testEmail,
-      subject: `[TEST] ${parsed.data.subject}`,
+      subject: `[TEST] ${sanitizedSubject}`,
       html,
     });
+
+    if (!result.success) {
+      return res.status(502).json({ error: result.error || 'Provider rejected test email' });
+    }
 
     res.json(result);
   } catch (err: any) {
@@ -346,6 +365,12 @@ emailRouter.patch('/:id', async (req: AuthRequest, res) => {
     if (data.audienceFilter) {
       data.audienceFilter = JSON.parse(JSON.stringify(data.audienceFilter));
     }
+    if (typeof data.messageBody === 'string') {
+      data.messageBody = sanitizeHtml(data.messageBody as string);
+    }
+    if (typeof data.subject === 'string') {
+      data.subject = (data.subject as string).replace(/<[^>]*>/g, '');
+    }
     if (data.scheduledAt !== undefined) {
       data.scheduledAt = data.scheduledAt ? new Date(data.scheduledAt as string) : null;
       data.status = data.scheduledAt ? 'SCHEDULED' : 'DRAFT';
@@ -359,5 +384,35 @@ emailRouter.patch('/:id', async (req: AuthRequest, res) => {
     res.json(updated);
   } catch {
     res.status(500).json({ error: 'Failed to update campaign' });
+  }
+});
+
+// DELETE /:id - Delete a draft or scheduled campaign
+emailRouter.delete('/:id', async (req: AuthRequest, res) => {
+  try {
+    const campaign = await prisma.emailCampaign.findFirst({
+      where: { id: req.params.id, hackathonId: req.params.hackathonId },
+    });
+    if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+    if (!['DRAFT', 'SCHEDULED', 'FAILED', 'CANCELLED'].includes(campaign.status)) {
+      return res.status(400).json({ error: `Cannot delete campaign with status: ${campaign.status}. Cancel it first.` });
+    }
+
+    await prisma.emailRecipient.deleteMany({ where: { campaignId: campaign.id } });
+    await prisma.emailCampaign.delete({ where: { id: campaign.id } });
+
+    await prisma.activityLog.create({
+      data: {
+        action: `Email campaign "${campaign.name}" deleted`,
+        hackathonId: req.params.hackathonId,
+        actorId: req.user!.id,
+        metadata: { campaignId: campaign.id },
+      },
+    }).catch((e) => logger.error(`[ActivityLog] ${e}`));
+
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to delete campaign' });
   }
 });

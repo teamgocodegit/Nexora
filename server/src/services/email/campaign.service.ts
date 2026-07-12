@@ -26,7 +26,9 @@ export type AudienceType =
   | 'ACTIVE'
   | 'SUBMITTED'
   | 'ROOM_SPECIFIC'
-  | 'SELECTED_TEAMS';
+  | 'SELECTED_TEAMS'
+  | 'APPROVED_REGISTRATIONS'
+  | 'REJECTED_REGISTRATIONS';
 
 export async function resolveAudience(
   hackathonId: string,
@@ -97,6 +99,34 @@ export async function resolveAudience(
         }) as (Team & { participants: Participant[] })[];
       }
       break;
+    case 'APPROVED_REGISTRATIONS':
+    case 'REJECTED_REGISTRATIONS': {
+      const regStatus = audienceType === 'APPROVED_REGISTRATIONS' ? 'ACCEPTED' : 'REJECTED';
+      const registrations = await prisma.registration.findMany({
+        where: { hackathonId, status: regStatus as any },
+      });
+      const localRecipients: Array<{ email: string; name: string; teamId?: string; participantId?: string; teamName?: string }> = [];
+      const localSeen = new Set<string>();
+      let localMissing = 0;
+      let localDupes = 0;
+      for (const reg of registrations) {
+        if (!reg.leaderEmail) { localMissing++; continue; }
+        const key = reg.leaderEmail.toLowerCase();
+        if (localSeen.has(key)) { localDupes++; continue; }
+        localSeen.add(key);
+        localRecipients.push({
+          email: reg.leaderEmail,
+          name: reg.leaderName,
+          teamName: reg.teamName,
+        });
+      }
+      return {
+        recipients: localRecipients,
+        totalCount: localRecipients.length,
+        missingEmailCount: localMissing,
+        duplicateCount: localDupes,
+      };
+    }
   }
 
   const seenEmails = new Set<string>();
@@ -265,23 +295,35 @@ export async function launchCampaign(
     (campaign.audienceFilter || undefined) as Record<string, unknown> | undefined
   );
 
-  const recipients = audience.recipients.map((r) => {
-    const leaderName = r.name;
-    const teamRecord = { name: r.teamName || 'Team', teamId: null, room: null, participants: [] };
+  const teamRoomMap = new Map<string, string | null>();
+  if (audience.recipients.some((r) => r.teamId)) {
+    const teamIds = audience.recipients.map((r) => r.teamId).filter(Boolean) as string[];
+    const teams = await prisma.team.findMany({
+      where: { id: { in: teamIds } },
+      select: { id: true, room: true },
+    });
+    for (const t of teams) {
+      teamRoomMap.set(t.id, t.room);
+    }
+  }
+
+  const recipientData = audience.recipients.map((r) => {
+    const roomName = r.teamId ? teamRoomMap.get(r.teamId) || null : null;
     const context = buildTemplateContext(
       hackathon,
       r.teamName || 'Team',
       null,
-      null,
+      roomName,
       r.name,
-      leaderName,
+      r.name,
       r.email,
     );
     return {
+      campaignId,
       email: r.email,
       recipientName: r.name,
-      participantId: r.participantId,
-      teamId: r.teamId,
+      participantId: r.participantId || null,
+      teamId: r.teamId || null,
       personalizedSubject: renderTemplate(campaign.subject, context),
       status: 'PENDING' as const,
     };
@@ -293,26 +335,16 @@ export async function launchCampaign(
       data: {
         status: 'QUEUED',
         startedAt: new Date(),
-        totalRecipients: recipients.length,
-        pendingCount: recipients.length,
+        totalRecipients: recipientData.length,
+        pendingCount: recipientData.length,
       },
     });
 
-    for (const r of recipients) {
-      await tx.emailRecipient.create({
-        data: {
-          campaignId,
-          email: r.email,
-          recipientName: r.recipientName,
-          personalizedSubject: r.personalizedSubject,
-          participantId: r.participantId,
-          teamId: r.teamId,
-        },
-      }).catch((e: Error) => {
-        if (!e.message.includes('Unique constraint')) throw e;
-      });
-    }
+    await tx.emailRecipient.createMany({
+      data: recipientData,
+      skipDuplicates: true,
+    });
   });
 
-  return { campaignId, totalRecipients: recipients.length };
+  return { campaignId, totalRecipients: recipientData.length };
 }

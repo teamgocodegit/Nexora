@@ -48,7 +48,7 @@ async function processRecipient(
       messageBody: string;
     };
   }
-): Promise<void> {
+): Promise<Array<{ id: string; data: Record<string, unknown> }>> {
   const subject = recipient.personalizedSubject || recipient.campaign.subject;
   const html = renderTemplate(recipient.campaign.messageBody, {
     participantName: recipient.recipientName || 'Participant',
@@ -71,9 +71,11 @@ async function processRecipient(
     html,
   });
 
+  const updates: Array<{ id: string; data: Record<string, unknown> }> = [];
+
   if (result.success) {
-    await prisma.emailRecipient.update({
-      where: { id: recipient.id },
+    updates.push({
+      id: recipient.id,
       data: {
         status: 'SENT',
         sentAt: new Date(),
@@ -81,9 +83,6 @@ async function processRecipient(
         attemptCount: { increment: 1 },
       },
     });
-
-    await updateCampaignCounts(recipient.campaign.id);
-    emitProgress(recipient.campaign.hackathonId, recipient.campaign.id);
   } else if (classifyError(result.error || '') === 'temporary') {
     const attemptCount = await prisma.emailRecipient.findUnique({
       where: { id: recipient.id },
@@ -91,8 +90,8 @@ async function processRecipient(
     }).then((r) => r?.attemptCount || 0);
 
     if (attemptCount >= MAX_RETRIES) {
-      await prisma.emailRecipient.update({
-        where: { id: recipient.id },
+      updates.push({
+        id: recipient.id,
         data: {
           status: 'FAILED',
           failedAt: new Date(),
@@ -102,8 +101,8 @@ async function processRecipient(
       });
     } else {
       const nextRetryAt = new Date(Date.now() + RETRY_DELAY_BASE * Math.pow(2, attemptCount));
-      await prisma.emailRecipient.update({
-        where: { id: recipient.id },
+      updates.push({
+        id: recipient.id,
         data: {
           status: 'RETRYING',
           nextRetryAt,
@@ -112,12 +111,9 @@ async function processRecipient(
         },
       });
     }
-
-    await updateCampaignCounts(recipient.campaign.id);
-    emitProgress(recipient.campaign.hackathonId, recipient.campaign.id);
   } else {
-    await prisma.emailRecipient.update({
-      where: { id: recipient.id },
+    updates.push({
+      id: recipient.id,
       data: {
         status: 'FAILED',
         failedAt: new Date(),
@@ -125,9 +121,21 @@ async function processRecipient(
         attemptCount: { increment: 1 },
       },
     });
+  }
 
-    await updateCampaignCounts(recipient.campaign.id);
-    emitProgress(recipient.campaign.hackathonId, recipient.campaign.id);
+  return updates;
+}
+
+async function applyUpdates(updates: Array<{ id: string; data: Record<string, unknown> }>, campaignIds: Set<string>): Promise<void> {
+  for (const u of updates) {
+    await prisma.emailRecipient.update({ where: { id: u.id }, data: u.data as any });
+  }
+  for (const cid of campaignIds) {
+    await updateCampaignCounts(cid);
+  }
+  for (const cid of campaignIds) {
+    const campaign = await prisma.emailCampaign.findUnique({ where: { id: cid }, select: { hackathonId: true } });
+    if (campaign) emitProgress(campaign.hackathonId, cid);
   }
 }
 
@@ -201,15 +209,24 @@ async function processNextBatch(): Promise<void> {
       data: { status: 'PROCESSING' },
     });
 
-    const refreshHackathonIds = new Set(recipients.map((r) => r.campaign.hackathonId));
-
-    await Promise.allSettled(
+    const results = await Promise.allSettled(
       recipients.map((r) => processRecipient(r))
     );
 
-    for (const hid of refreshHackathonIds) {
-      emitProgress(hid, recipients[0].campaign.id);
+    const allUpdates: Array<{ id: string; data: Record<string, unknown> }> = [];
+    const refreshedCampaignIds = new Set<string>();
+
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        allUpdates.push(...result.value);
+        for (const u of result.value) {
+          const recipient = recipients.find((r) => r.id === u.id);
+          if (recipient) refreshedCampaignIds.add(recipient.campaign.id);
+        }
+      }
     }
+
+    await applyUpdates(allUpdates, refreshedCampaignIds);
   } catch (err: any) {
     logger.error(`[EmailWorker] Batch error: ${err.message}`);
   } finally {

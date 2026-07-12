@@ -31,13 +31,18 @@ const DEFAULT_VALUES: Record<string, string> = {
 
 const VARIABLE_PATTERN = /\{\{(\w+)\}\}/g;
 
+function toCamelCase(str: string): string {
+  return str.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+}
+
 export function renderTemplate(template: string, context: TemplateContext): string {
   return template.replace(VARIABLE_PATTERN, (_match, varName: string) => {
-    if (varName in context && context[varName]) {
-      return context[varName];
+    const camelKey = toCamelCase(varName);
+    if (camelKey in context && context[camelKey]) {
+      return context[camelKey];
     }
-    if (varName in DEFAULT_VALUES) {
-      return DEFAULT_VALUES[varName];
+    if (camelKey in DEFAULT_VALUES) {
+      return DEFAULT_VALUES[camelKey];
     }
     return `{{${varName}}}`;
   });
@@ -56,6 +61,20 @@ export function extractVariables(template: string): string[] {
 
 export function hasUnresolvedVariables(rendered: string): boolean {
   return VARIABLE_PATTERN.test(rendered);
+}
+
+export function sanitizeHtml(html: string): string {
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/on\w+\s*=\s*"[^"]*"/gi, '')
+    .replace(/on\w+\s*=\s*'[^']*'/gi, '')
+    .replace(/on\w+\s*=\s*\w+/gi, '')
+    .replace(/javascript\s*:/gi, '')
+    .replace(/<iframe\b[^>]*\/?>/gi, '')
+    .replace(/<\/iframe>/gi, '')
+    .replace(/<embed\b[^>]*\/?>/gi, '')
+    .replace(/<object\b[^>]*\/?>/gi, '')
+    .replace(/<\/object>/gi, '');
 }
 
 export const BUILTIN_TEMPLATES = [
