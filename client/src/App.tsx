@@ -24,6 +24,8 @@ import { EmailCampaignsPage } from '@/pages/EmailCampaignsPage';
 import { EmailComposerPage } from '@/pages/EmailComposerPage';
 import { EmailCampaignDetailPage } from '@/pages/EmailCampaignDetailPage';
 import { ReliabilityCenterPage } from '@/pages/ReliabilityCenterPage';
+import { OperationsDashboardPage } from '@/pages/OperationsDashboardPage';
+import { PrintCenterPage } from '@/pages/PrintCenterPage';
 
 function Guard({ children }: { children: React.ReactNode }) {
   const auth = useAuthStore((s) => s.isAuthenticated);
@@ -64,7 +66,9 @@ export default function App() {
           <Route path="admin" element={<AdminPage />} />
           <Route path="registrations" element={<RegistrationsPage />} />
           <Route path="rooms" element={<RoomsPage />} />
-          <Route path="operations" element={<LiveOpsPage />} />
+          <Route path="operations" element={<OperationsDashboardPage />} />
+          <Route path="print" element={<PrintCenterPage />} />
+          <Route path="operations-legacy" element={<LiveOpsPage />} />
           <Route path="automations" element={<AutomationsPage />} />
           <Route path="milestones" element={<MilestonesPage />} />
           <Route path="data-hub" element={<RegistrationDataHub />} />

@@ -1,27 +1,34 @@
 import { useEffect, useState } from 'react';
-import { Plus, X, DoorOpen, Users, Building2, Hash, ChevronDown } from 'lucide-react';
+import { Plus, X, DoorOpen, Users, Building2 } from 'lucide-react';
 import { useHackathonStore } from '@/store/hackathonStore';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { api } from '@/lib/api';
-import { cn } from '@/lib/utils';
+
 
 interface Room {
   id: string;
   name: string;
+  code?: string;
+  description?: string;
   building?: string;
   floor?: string;
+  capacityTeams?: number;
+  capacityPeople?: number;
   capacity: number;
-  status: 'AVAILABLE' | 'NEAR_CAPACITY' | 'FULL' | 'CLOSED';
-  currentOccupancy: number;
+  notes?: string;
+  sortOrder: number;
+  status: 'ACTIVE' | 'FULL' | 'CLOSED' | 'ARCHIVED';
+  currentTeams: number;
+  currentPeople: number;
   hackathonId: string;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  AVAILABLE: { label: 'Available', color: 'var(--green)', bg: 'var(--green-dim)' },
-  NEAR_CAPACITY: { label: 'Near Capacity', color: 'var(--yellow)', bg: 'var(--yellow-dim)' },
+  ACTIVE: { label: 'Active', color: 'var(--green)', bg: 'var(--green-dim)' },
   FULL: { label: 'Full', color: 'var(--red)', bg: 'var(--red-dim)' },
   CLOSED: { label: 'Closed', color: 'var(--text-muted)', bg: 'var(--bg-muted)' },
+  ARCHIVED: { label: 'Archived', color: 'var(--text-muted)', bg: 'var(--bg-muted)' },
 };
 
 export function RoomsPage() {
@@ -33,7 +40,7 @@ export function RoomsPage() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
-  const [createForm, setCreateForm] = useState({ name: '', building: '', floor: '', capacity: '30' });
+  const [createForm, setCreateForm] = useState({ name: '', code: '', description: '', building: '', floor: '', capacity: '30', capacityTeams: '', capacityPeople: '', notes: '' });
   const [creating, setCreating] = useState(false);
 
   const fetchRooms = async () => {
@@ -54,13 +61,18 @@ export function RoomsPage() {
     try {
       await api.post(`/hackathons/${activeHackathon.id}/rooms`, {
         name: createForm.name.trim(),
+        code: createForm.code.trim() || undefined,
+        description: createForm.description.trim() || undefined,
         building: createForm.building.trim() || undefined,
         floor: createForm.floor.trim() || undefined,
         capacity: parseInt(createForm.capacity) || 30,
+        capacityTeams: createForm.capacityTeams ? parseInt(createForm.capacityTeams) : undefined,
+        capacityPeople: createForm.capacityPeople ? parseInt(createForm.capacityPeople) : undefined,
+        notes: createForm.notes.trim() || undefined,
       });
       toast('Room created', 'success');
       setShowCreate(false);
-      setCreateForm({ name: '', building: '', floor: '', capacity: '30' });
+      setCreateForm({ name: '', code: '', description: '', building: '', floor: '', capacity: '30', capacityTeams: '', capacityPeople: '', notes: '' });
       fetchRooms();
     } catch (e: any) {
       toast(e.message, 'error');
@@ -70,7 +82,7 @@ export function RoomsPage() {
   };
 
   const totalCapacity = rooms.reduce((sum, r) => sum + r.capacity, 0);
-  const totalOccupancy = rooms.reduce((sum, r) => sum + r.currentOccupancy, 0);
+  const totalOccupancy = rooms.reduce((sum, r) => sum + r.currentTeams, 0);
 
   if (!activeHackathon) {
     return (
@@ -113,8 +125,7 @@ export function RoomsPage() {
           </div>
           <div className="flex gap-4 mt-3">
             <span className="text-caption">{rooms.length} rooms</span>
-            <span className="text-caption">{rooms.filter((r) => r.status === 'AVAILABLE').length} available</span>
-            <span className="text-caption" style={{ color: 'var(--yellow)' }}>{rooms.filter((r) => r.status === 'NEAR_CAPACITY').length} near capacity</span>
+            <span className="text-caption">{rooms.filter((r) => r.status === 'ACTIVE').length} active</span>
             <span className="text-caption" style={{ color: 'var(--red)' }}>{rooms.filter((r) => r.status === 'FULL').length} full</span>
           </div>
         </div>
@@ -151,8 +162,10 @@ export function RoomsPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {rooms.map((room) => {
-            const sc = STATUS_CONFIG[room.status] || STATUS_CONFIG.AVAILABLE;
-            const occupancyPct = room.capacity ? Math.min(100, Math.round((room.currentOccupancy / room.capacity) * 100)) : 0;
+            const sc = STATUS_CONFIG[room.status] || STATUS_CONFIG.ACTIVE;
+            const maxCap = Math.max(room.capacityTeams || room.capacityPeople || room.capacity, 1);
+            const capLabel = room.capacityTeams ? `${room.currentTeams}/${room.capacityTeams}` : `${room.currentPeople}`;
+            const occupancyPct = Math.min(100, Math.round((room.currentTeams / maxCap) * 100));
             return (
               <div key={room.id} className="card p-4">
                 <div className="flex items-center justify-between mb-3">
@@ -178,7 +191,7 @@ export function RoomsPage() {
                     className="progress-fill"
                     style={{
                       width: `${occupancyPct}%`,
-                      background: room.status === 'FULL' ? 'var(--red)' : room.status === 'NEAR_CAPACITY' ? 'var(--yellow)' : 'var(--accent)',
+                      background: room.status === 'FULL' ? 'var(--red)' : 'var(--accent)',
                     }}
                   />
                 </div>
@@ -186,7 +199,7 @@ export function RoomsPage() {
                 <div className="flex items-center justify-between">
                   <p className="text-caption">
                     <Users className="w-3 h-3 inline mr-1" style={{ verticalAlign: -1 }} />
-                    {room.currentOccupancy} / {room.capacity} teams
+                    {capLabel}{room.capacityPeople ? ` (${room.currentPeople} people)` : ''}
                   </p>
                   <p className="text-caption font-mono">{occupancyPct}%</p>
                 </div>
@@ -223,6 +236,18 @@ export function RoomsPage() {
                 placeholder="Room name *"
                 className="input"
               />
+              <input
+                value={createForm.code}
+                onChange={(e) => setCreateForm((p) => ({ ...p, code: e.target.value }))}
+                placeholder="Room code (optional)"
+                className="input"
+              />
+              <input
+                value={createForm.description}
+                onChange={(e) => setCreateForm((p) => ({ ...p, description: e.target.value }))}
+                placeholder="Description (optional)"
+                className="input"
+              />
               <div className="grid grid-cols-2 gap-3">
                 <input
                   value={createForm.building}
@@ -237,13 +262,38 @@ export function RoomsPage() {
                   className="input"
                 />
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="number"
+                  value={createForm.capacityTeams}
+                  onChange={(e) => setCreateForm((p) => ({ ...p, capacityTeams: e.target.value }))}
+                  placeholder="Max teams (optional)"
+                  className="input"
+                  min="1"
+                />
+                <input
+                  type="number"
+                  value={createForm.capacityPeople}
+                  onChange={(e) => setCreateForm((p) => ({ ...p, capacityPeople: e.target.value }))}
+                  placeholder="Max people (optional)"
+                  className="input"
+                  min="1"
+                />
+              </div>
               <input
                 type="number"
                 value={createForm.capacity}
                 onChange={(e) => setCreateForm((p) => ({ ...p, capacity: e.target.value }))}
-                placeholder="Capacity"
+                placeholder="Legacy capacity (default 30)"
                 className="input"
                 min="1"
+              />
+              <textarea
+                value={createForm.notes}
+                onChange={(e) => setCreateForm((p) => ({ ...p, notes: e.target.value }))}
+                placeholder="Operational notes (optional)"
+                className="input"
+                rows={2}
               />
             </div>
             <div className="px-5 py-4 border-t" style={{ borderColor: 'var(--border)', paddingBottom: 'calc(16px + var(--safe-bottom))' }}>

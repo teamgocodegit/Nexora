@@ -74,9 +74,17 @@ enum CertStatus {
 
 enum RoomStatus {
   AVAILABLE
+  ACTIVE
   NEAR_CAPACITY
   FULL
   CLOSED
+  ARCHIVED
+}
+
+enum CapacityOverrideStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
 }
 
 enum AutomationTriggerType {
@@ -158,6 +166,7 @@ model User {
   deletedParticipants Participant[]            @relation("ParticipantDeletion")
   deletedRooms        Room[]                  @relation("RoomDeletion")
   snapshots           HackathonSnapshot[]
+  capacityOverrides   CapacityOverride[]
 }
 
 model InviteLink {
@@ -219,6 +228,7 @@ model Hackathon {
   milestones         EventMilestone[]
   emailCampaigns     EmailCampaign[]
   snapshots          HackathonSnapshot[]
+  capacityOverrides  CapacityOverride[]
 }
 
 model Registration {
@@ -248,9 +258,15 @@ model Registration {
 model Room {
   id        String     @id @default(cuid())
   name      String
+  code      String?
+  description String?
   building  String?
   floor     String?
+  capacityTeams  Int?
+  capacityPeople Int?
   capacity  Int        @default(30)
+  notes     String?
+  sortOrder Int        @default(0)
   status    RoomStatus @default(AVAILABLE)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
@@ -263,6 +279,8 @@ model Room {
   hackathonId String
 
   deletedBy User? @relation("RoomDeletion", fields: [deletedById], references: [id])
+  teams     Team[]
+  capacityOverrides CapacityOverride[]
 
   @@unique([hackathonId, name])
 }
@@ -416,6 +434,11 @@ model Team {
   problemStatement   ProblemStatement? @relation("TeamProblem", fields: [problemStatementId], references: [id])
   problemStatementId String?
 
+  roomId String?
+
+  roomRef Room? @relation(fields: [roomId], references: [id])
+  capacityOverrides CapacityOverride[]
+
   deletedBy   User? @relation("TeamDeletion", fields: [deletedById], references: [id])
   participants      Participant[]
   messageRecipients MessageRecipient[]
@@ -423,6 +446,7 @@ model Team {
   scores            Score[]
 
   @@unique([hackathonId, name])
+  @@index([roomId])
 }
 
 model Participant {
@@ -585,6 +609,32 @@ model HackathonSnapshot {
 
   @@index([hackathonId, type])
   @@index([hackathonId, createdAt])
+}
+
+model CapacityOverride {
+  id                String                @id @default(cuid())
+  reason            String
+  previousOccupancyTeams   Int
+  previousOccupancyPeople  Int
+  projectedOccupancyTeams  Int
+  projectedOccupancyPeople Int
+  status            CapacityOverrideStatus @default(APPROVED)
+  createdAt         DateTime              @default(now())
+
+  room   Room   @relation(fields: [roomId], references: [id])
+  roomId String
+
+  team   Team?  @relation(fields: [teamId], references: [id])
+  teamId String?
+
+  actor   User   @relation(fields: [actorId], references: [id])
+  actorId String
+
+  hackathon   Hackathon @relation(fields: [hackathonId], references: [id])
+  hackathonId String
+
+  @@index([roomId])
+  @@index([hackathonId])
 }
 
 model BackupMetadata {

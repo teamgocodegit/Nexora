@@ -16,6 +16,14 @@ export interface IntegrityReport {
   overall: IssueSeverity;
   issues: IntegrityIssue[];
   healthy: boolean;
+  summary?: {
+    totalTeams: number;
+    totalParticipants: number;
+    totalRooms: number;
+    totalScores: number;
+    totalRegistrations: number;
+    totalCertificates: number;
+  };
 }
 
 export async function checkIntegrity(hackathonId: string): Promise<IntegrityReport> {

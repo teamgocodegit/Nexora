@@ -1,6 +1,6 @@
 import { Outlet, NavLink } from 'react-router-dom';
 import { useEffect, useMemo } from 'react';
-import { LayoutDashboard, Users, UserCheck, MessageSquare, Award, Shield } from 'lucide-react';
+import { LayoutDashboard, Users, UserCheck, MessageSquare, Award, Shield, DoorOpen, Radio, Printer } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useHackathonStore } from '@/store/hackathonStore';
 import { useTeamsStore } from '@/store/teamsStore';
@@ -27,6 +27,9 @@ export function AppShell() {
         { to: '/teams', label: 'Teams', icon: Users },
         { to: '/checkin', label: 'Check-in', icon: UserCheck },
         { to: '/messages', label: 'Msgs', icon: MessageSquare },
+        { to: '/rooms', label: 'Rooms', icon: DoorOpen },
+        { to: '/operations', label: 'Ops', icon: Radio },
+        { to: '/print', label: 'Print', icon: Printer },
         { to: '/certificates', label: 'Certs', icon: Award },
         { to: '/admin', label: 'Admins', icon: Shield },
       ]

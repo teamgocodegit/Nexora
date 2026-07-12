@@ -29,6 +29,9 @@ export type Permission =
   | 'team:search'
   | 'announcement:view'
   | 'room:manage'
+  | 'room:view'
+  | 'room:assign'
+  | 'print:documents'
   | 'automation:manage'
   | 'registration:manage';
 
@@ -50,12 +53,16 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'team:checkin', 'team:view', 'team:search',
     'announcement:view',
     'room:manage',
+    'room:view',
+    'room:assign',
+    'print:documents',
     'automation:manage',
     'registration:manage',
   ],
   SUB_ADMIN: [
     'team:checkin', 'team:view', 'team:search',
     'announcement:view',
+    'room:view',
   ],
 };
 

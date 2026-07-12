@@ -64,6 +64,7 @@ export interface Team {
   name: string;
   status: TeamStatus;
   room?: string;
+  roomId?: string;
   tableNumber?: string;
   projectName?: string;
   projectUrl?: string;
@@ -142,18 +143,67 @@ export interface Registration {
   updatedAt: string;
 }
 
-export type RoomStatusType = 'AVAILABLE' | 'NEAR_CAPACITY' | 'FULL' | 'CLOSED';
+export type RoomStatusType = 'ACTIVE' | 'FULL' | 'CLOSED' | 'ARCHIVED';
 
 export interface Room {
   id: string;
   name: string;
+  code?: string;
+  description?: string;
   building?: string;
   floor?: string;
+  capacityTeams?: number;
+  capacityPeople?: number;
   capacity: number;
+  notes?: string;
+  sortOrder: number;
   status: RoomStatusType;
   hackathonId: string;
   createdAt: string;
   updatedAt: string;
+  currentTeams?: number;
+  currentPeople?: number;
+}
+
+export interface RoomCard {
+  id: string;
+  name: string;
+  code: string | null;
+  building: string | null;
+  floor: string | null;
+  status: string;
+  capacityTeams: number | null;
+  capacityPeople: number | null;
+  currentTeams: number;
+  currentPeople: number;
+  remainingTeamCapacity: number | null;
+  remainingPeopleCapacity: number | null;
+  sortOrder: number;
+}
+
+export interface OpsDashboardMetrics {
+  totalTeams: number;
+  checkedIn: number;
+  notArrived: number;
+  assigned: number;
+  unassigned: number;
+  totalParticipants: number;
+  activeRooms: number;
+  fullRooms: number;
+  closedRooms: number;
+  nearlyFullRooms: number;
+  capacityOverrides: number;
+  checkedInNoRoom: number;
+}
+
+export interface ExceptionItem {
+  type: 'INFO' | 'WARNING' | 'CRITICAL';
+  category: string;
+  entityType: string;
+  entityId: string;
+  entityName: string | null;
+  explanation: string;
+  suggestedAction: string;
 }
 
 export type AutomationTriggerType = 'TIME_BASED' | 'EVENT_TRIGGERED';

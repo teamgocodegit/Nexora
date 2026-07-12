@@ -1,47 +1,40 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
-import { authenticate, requireSuperAdmin, AuthRequest } from '../middleware/auth';
+import { authenticate, AuthRequest } from '../middleware/auth';
+import { requireSuperAdmin, requirePermission } from '../middleware/permissions';
 import { io } from '../index';
 import { softDeleteRoom } from '../services/reliability/softDelete.service';
 import { logActivity } from '../services/reliability/activityLog.service';
 import { emitToHackathon } from '../lib/socket';
 import { logger } from '../lib/logger';
+import {
+  createRoomSchema,
+  updateRoomSchema,
+  getRoomOccupancy,
+  getBulkOccupancy,
+  recalculateRoomStatus,
+  archiveRoom,
+  restoreArchivedRoom,
+  reorderRooms,
+  assignTeamsToRoom,
+} from '../services/venue/room.service';
 
 export const roomsRouter = Router({ mergeParams: true });
 roomsRouter.use(authenticate);
-
-const createSchema = z.object({
-  name: z.string().min(1, 'Room name is required'),
-  building: z.string().optional(),
-  floor: z.string().optional(),
-  capacity: z.number().min(1).default(30),
-});
 
 roomsRouter.get('/', async (req: AuthRequest, res) => {
   try {
     const rooms = await prisma.room.findMany({
       where: { hackathonId: req.params.hackathonId, deletedAt: null },
-      orderBy: { createdAt: 'asc' },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     });
 
-    const teamCounts = await prisma.team.groupBy({
-      by: ['room'],
-      where: { hackathonId: req.params.hackathonId, room: { not: null }, deletedAt: null },
-      _count: true,
-    });
-
-    const countMap = new Map(teamCounts.map((t) => [t.room, t._count]));
+    const occupancyMap = await getBulkOccupancy(req.params.hackathonId);
 
     const roomsWithOccupancy = rooms.map((room) => {
-      const assigned = countMap.get(room.name) || 0;
-      let status = room.status;
-      if (status === 'AVAILABLE' || status === 'NEAR_CAPACITY' || status === 'FULL') {
-        if (assigned >= room.capacity) status = 'FULL';
-        else if (assigned >= room.capacity * 0.8) status = 'NEAR_CAPACITY';
-        else status = 'AVAILABLE';
-      }
-      return { ...room, currentOccupancy: assigned, status };
+      const occ = occupancyMap.get(room.name) || { teamCount: 0, peopleCount: 0 };
+      return { ...room, currentTeams: occ.teamCount, currentPeople: occ.peopleCount };
     });
 
     res.json(roomsWithOccupancy);
@@ -51,7 +44,7 @@ roomsRouter.get('/', async (req: AuthRequest, res) => {
 });
 
 roomsRouter.post('/', requireSuperAdmin, async (req: AuthRequest, res) => {
-  const parsed = createSchema.safeParse(req.body);
+  const parsed = createRoomSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: 'Invalid input', details: parsed.error.errors });
   }
@@ -76,9 +69,12 @@ roomsRouter.post('/', requireSuperAdmin, async (req: AuthRequest, res) => {
         action: `Room "${room.name}" created`,
         hackathonId: req.params.hackathonId,
         actorId: req.user!.id,
+        entityType: 'Room',
+        entityId: room.id,
       },
     }).catch((e) => logger.error(`[ActivityLog] ${e}`));
 
+    emitToHackathon(io, req.params.hackathonId, 'room:created', room);
     res.status(201).json(room);
   } catch (err: any) {
     if (err.code === 'P2002') {
@@ -89,24 +85,28 @@ roomsRouter.post('/', requireSuperAdmin, async (req: AuthRequest, res) => {
 });
 
 roomsRouter.patch('/:roomId', requireSuperAdmin, async (req: AuthRequest, res) => {
-  const schema = z.object({
-    name: z.string().min(1).optional(),
-    building: z.string().optional().nullable(),
-    floor: z.string().optional().nullable(),
-    capacity: z.number().min(1).optional(),
-    status: z.enum(['AVAILABLE', 'NEAR_CAPACITY', 'FULL', 'CLOSED']).optional(),
-  });
-
-  const parsed = schema.safeParse(req.body);
+  const parsed = updateRoomSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: 'Invalid input' });
+    return res.status(400).json({ error: 'Invalid input', details: parsed.error.errors });
   }
 
   try {
     const room = await prisma.room.update({
       where: { id: req.params.roomId },
-      data: parsed.data,
+      data: parsed.data as any,
     });
+
+    if (parsed.data.status === 'ARCHIVED' || parsed.data.status === 'CLOSED') {
+      await prisma.activityLog.create({
+        data: {
+          action: `Room "${room.name}" status changed to ${parsed.data.status}`,
+          hackathonId: req.params.hackathonId,
+          actorId: req.user!.id,
+          entityType: 'Room',
+          entityId: room.id,
+        },
+      }).catch((e) => logger.error(`[ActivityLog] ${e}`));
+    }
 
     emitToHackathon(io, req.params.hackathonId, 'room:updated', room);
     res.json(room);
@@ -139,6 +139,7 @@ roomsRouter.delete('/:roomId', requireSuperAdmin, async (req: AuthRequest, res) 
 roomsRouter.post('/:roomId/assign-teams', requireSuperAdmin, async (req: AuthRequest, res) => {
   const schema = z.object({
     teamIds: z.array(z.string()).min(1),
+    overrideReason: z.string().optional(),
   });
 
   const parsed = schema.safeParse(req.body);
@@ -147,36 +148,81 @@ roomsRouter.post('/:roomId/assign-teams', requireSuperAdmin, async (req: AuthReq
   }
 
   try {
+    const result = await assignTeamsToRoom(
+      req.params.hackathonId,
+      req.params.roomId,
+      parsed.data.teamIds,
+      req.user!.id,
+      parsed.data.overrideReason,
+    );
+
     const room = await prisma.room.findUnique({ where: { id: req.params.roomId } });
-    if (!room) return res.status(404).json({ error: 'Room not found' });
+    emitToHackathon(io, req.params.hackathonId, 'teams:room-assigned', { roomId: room?.id, roomName: room?.name });
+    emitToHackathon(io, req.params.hackathonId, 'room:occupancy', { roomId: room?.id, roomName: room?.name });
 
-    const currentCount = await prisma.team.count({
-      where: { hackathonId: req.params.hackathonId, room: room.name, deletedAt: null },
+    res.json({ success: true, assigned: result.assigned });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+roomsRouter.post('/reorder', requireSuperAdmin, async (req: AuthRequest, res) => {
+  const schema = z.object({ orderedIds: z.array(z.string()) });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'orderedIds array required' });
+
+  try {
+    await reorderRooms(req.params.hackathonId, parsed.data.orderedIds);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+roomsRouter.post('/:roomId/archive', requireSuperAdmin, async (req: AuthRequest, res) => {
+  try {
+    await archiveRoom(req.params.roomId, req.params.hackathonId, req.user!.id);
+    emitToHackathon(io, req.params.hackathonId, 'room:updated', { id: req.params.roomId, status: 'ARCHIVED' });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+roomsRouter.post('/:roomId/restore-archive', requireSuperAdmin, async (req: AuthRequest, res) => {
+  try {
+    await restoreArchivedRoom(req.params.roomId, req.params.hackathonId, req.user!.id);
+    emitToHackathon(io, req.params.hackathonId, 'room:updated', { id: req.params.roomId, status: 'ACTIVE' });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+roomsRouter.patch('/:roomId/status', requireSuperAdmin, async (req: AuthRequest, res) => {
+  const schema = z.object({
+    status: z.enum(['ACTIVE', 'FULL', 'CLOSED', 'ARCHIVED']),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Invalid status' });
+
+  try {
+    const room = await prisma.room.update({
+      where: { id: req.params.roomId },
+      data: { status: parsed.data.status as any },
     });
-
-    if (currentCount + parsed.data.teamIds.length > room.capacity) {
-      return res.status(400).json({
-        error: `Cannot assign ${parsed.data.teamIds.length} teams. Room capacity is ${room.capacity}, ${currentCount} already assigned.`,
-      });
-    }
-
-    await prisma.team.updateMany({
-      where: { id: { in: parsed.data.teamIds }, hackathonId: req.params.hackathonId },
-      data: { room: room.name },
-    });
-
     await prisma.activityLog.create({
       data: {
-        action: `${parsed.data.teamIds.length} teams assigned to room "${room.name}"`,
+        action: `Room "${room.name}" status set to ${parsed.data.status}`,
         hackathonId: req.params.hackathonId,
         actorId: req.user!.id,
+        entityType: 'Room',
+        entityId: room.id,
       },
     }).catch((e) => logger.error(`[ActivityLog] ${e}`));
-
-    emitToHackathon(io, req.params.hackathonId, 'teams:room-assigned', { roomId: room.id, roomName: room.name });
-
-    res.json({ success: true, assigned: parsed.data.teamIds.length });
-  } catch {
-    res.status(500).json({ error: 'Failed to assign teams to room' });
+    emitToHackathon(io, req.params.hackathonId, 'room:updated', room);
+    res.json(room);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
 });
