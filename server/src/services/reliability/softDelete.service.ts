@@ -127,6 +127,69 @@ export async function restoreRoom(roomId: string): Promise<void> {
   });
 }
 
+export async function softDeleteParticipant(
+  participantId: string,
+  deletedById: string,
+  reason?: string,
+): Promise<void> {
+  const participant = await prisma.participant.findUnique({
+    where: { id: participantId },
+    include: { team: { select: { hackathonId: true } } },
+  });
+
+  if (!participant) throw new Error('Participant not found');
+
+  await prisma.participant.update({
+    where: { id: participantId },
+    data: {
+      deletedAt: new Date(),
+      deletedById,
+      deletionReason: reason || null,
+    },
+  });
+}
+
+export async function restoreParticipant(participantId: string): Promise<void> {
+  const participant = await prisma.participant.findUnique({
+    where: { id: participantId },
+  });
+
+  if (!participant) throw new Error('Participant not found');
+  if (!participant.deletedAt) throw new Error('Participant is not deleted');
+
+  await prisma.participant.update({
+    where: { id: participantId },
+    data: { deletedAt: null, deletedById: null, deletionReason: null },
+  });
+}
+
+export async function checkTeamDeleteGuard(teamId: string): Promise<{ allowed: boolean; blockers: string[] }> {
+  const team = await prisma.team.findUnique({
+    where: { id: teamId },
+    include: {
+      _count: { select: { scores: true, certificates: true } },
+    },
+  });
+
+  if (!team) throw new Error('Team not found');
+
+  const blockers: string[] = [];
+  if (team.status === 'CHECKED_IN') {
+    blockers.push(`Team "${team.name}" has already checked in. Archive the team instead.`);
+  }
+  if (team.status === 'ACTIVE' || team.status === 'SUBMITTED') {
+    blockers.push(`Team "${team.name}" is in ${team.status} status with ongoing activity.`);
+  }
+  if (team._count.scores > 0) {
+    blockers.push(`Team "${team.name}" has ${team._count.scores} judging scores. Delete scores first or archive.`);
+  }
+  if (team._count.certificates > 0) {
+    blockers.push(`Team "${team.name}" has ${team._count.certificates} certificates. Revoke certificates first or archive.`);
+  }
+
+  return { allowed: blockers.length === 0, blockers };
+}
+
 export async function getDeletedRecords(hackathonId: string) {
   const [teams, rooms, participants] = await Promise.all([
     prisma.team.findMany({

@@ -3,10 +3,11 @@ import { authenticate } from '../middleware/auth';
 import { requireSuperAdmin } from '../middleware/permissions';
 import { prisma } from '../lib/prisma';
 import { logActivity } from '../services/reliability/activityLog.service';
-import { softDeleteTeam, softDeleteRoom, restoreTeam, restoreRoom, calculateTeamDeleteImpact, getDeletedRecords } from '../services/reliability/softDelete.service';
+import { softDeleteTeam, softDeleteRoom, softDeleteParticipant, restoreTeam, restoreRoom, restoreParticipant, calculateTeamDeleteImpact, getDeletedRecords, checkTeamDeleteGuard } from '../services/reliability/softDelete.service';
 import { createSnapshot, verifySnapshotIntegrity, planRestore, listSnapshots } from '../services/reliability/snapshot.service';
+import { generateEmergencyPdf } from '../services/reliability/pdfExport.service';
 import { checkIntegrity } from '../services/reliability/integrity.service';
-import { exportTeamsCsv, exportParticipantsCsv, exportCheckinCsv, exportRoomsCsv, exportScoresCsv, generateEmergencyPack } from '../services/reliability/export.service';
+import { exportTeamsCsv, exportParticipantsCsv, exportCheckinCsv, exportRoomsCsv, exportScoresCsv, generateEmergencyPack, generateEmergencyPackZip } from '../services/reliability/export.service';
 import { findStuckJobs, recoverStuckImport, recoverStuckCampaign } from '../services/reliability/stuckJobs.service';
 
 export const reliabilityRouter = Router({ mergeParams: true });
@@ -109,6 +110,56 @@ reliabilityRouter.post('/restore/room/:roomId', async (req: Request, res: Respon
       actorId: (req as any).user!.id,
       entityType: 'Room',
       entityId: req.params.roomId!,
+    });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/* ───── Delete Guard ───── */
+reliabilityRouter.get('/delete/team/:teamId/guard', async (req: Request, res: Response) => {
+  try {
+    const result = await checkTeamDeleteGuard(req.params.teamId!);
+    res.json(result);
+  } catch (err: any) {
+    res.status(404).json({ error: err.message });
+  }
+});
+
+/* ───── Soft Delete: Participant ───── */
+reliabilityRouter.delete('/delete/participant/:participantId', async (req: Request, res: Response) => {
+  try {
+    const { participantId } = req.params;
+    const { reason } = req.body || {};
+    const userId = (req as any).user!.id;
+
+    await softDeleteParticipant(participantId, userId, reason);
+
+    await logActivity({
+      action: `Participant soft-deleted`,
+      hackathonId: req.params.hackathonId!,
+      actorId: userId,
+      entityType: 'Participant',
+      entityId: participantId,
+      metadata: { reason: reason || null },
+    });
+
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+reliabilityRouter.post('/restore/participant/:participantId', async (req: Request, res: Response) => {
+  try {
+    await restoreParticipant(req.params.participantId!);
+    await logActivity({
+      action: `Participant restored from soft delete`,
+      hackathonId: req.params.hackathonId!,
+      actorId: (req as any).user!.id,
+      entityType: 'Participant',
+      entityId: req.params.participantId!,
     });
     res.json({ success: true });
   } catch (err: any) {
@@ -330,10 +381,34 @@ reliabilityRouter.get('/export/scores', async (req: Request, res: Response) => {
 
 reliabilityRouter.get('/export/emergency-pack', async (req: Request, res: Response) => {
   try {
-    const pack = await generateEmergencyPack(req.params.hackathonId!);
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', 'attachment; filename="emergency-pack.json"');
-    res.json(pack);
+    const hackathon = await prisma.hackathon.findUnique({ where: { id: req.params.hackathonId! } });
+    if (!hackathon) { res.status(404).json({ error: 'Hackathon not found' }); return; }
+
+    const format = req.query.format as string;
+    if (format === 'zip') {
+      const { stream, filename } = await generateEmergencyPackZip(req.params.hackathonId!, hackathon.name);
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      stream.pipe(res);
+    } else {
+      const pack = await generateEmergencyPack(req.params.hackathonId!);
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', 'attachment; filename="emergency-pack.json"');
+      res.json(pack);
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+reliabilityRouter.get('/export/emergency-pdf', async (req: Request, res: Response) => {
+  try {
+    const pdf = await generateEmergencyPdf(req.params.hackathonId!);
+    const hackathon = await prisma.hackathon.findUnique({ where: { id: req.params.hackathonId! } });
+    const safeName = (hackathon?.name || 'hackathon').replace(/[^a-zA-Z0-9_-]/g, '_');
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="Nexora-Report-${safeName}.pdf"`);
+    res.send(pdf);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

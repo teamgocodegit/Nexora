@@ -1,4 +1,7 @@
 import { prisma } from '../../lib/prisma';
+import archiver from 'archiver';
+import crypto from 'crypto';
+import { Readable } from 'stream';
 
 export interface CsvRow {
   [key: string]: string | number | boolean | null;
@@ -231,5 +234,67 @@ export async function generateEmergencyPack(hackathonId: string) {
         teamsAssigned: countMap.get(r.name) || 0,
       })),
     },
+  };
+}
+
+export async function generateEmergencyPackZip(hackathonId: string, hackathonName: string): Promise<{ stream: Readable; filename: string }> {
+  const archive = archiver('zip', { zlib: { level: 9 } });
+
+  const snapshotJson = await generateEmergencyPack(hackathonId);
+  const teamsCsv = await exportTeamsCsv(hackathonId);
+  const participantsCsv = await exportParticipantsCsv(hackathonId);
+  const checkinCsv = await exportCheckinCsv(hackathonId);
+  const roomsCsv = await exportRoomsCsv(hackathonId);
+  const scoresCsv = await exportScoresCsv(hackathonId);
+
+  const checksums: Record<string, string> = {};
+
+  const addFile = (name: string, content: string) => {
+    archive.append(content, { name });
+    checksums[name] = crypto.createHash('sha256').update(content).digest('hex');
+  };
+
+  addFile('README.txt', `NEXORA EMERGENCY PACK
+Generated: ${new Date().toISOString()}
+Hackathon: ${hackathonName}
+Format Version: 2
+
+This package contains operational data for offline use.
+All files use SHA-256 checksums in manifest.json for integrity verification.
+
+Files:
+- teams.csv        : Team master list with IDs, status, room assignments
+- participants.csv : All participants with names, emails, team info
+- checkin.csv      : Check-in status for all teams
+- rooms.csv        : Room allocations with capacity and occupancy
+- scores.csv       : Judging scores by criteria
+- snapshot.json    : Complete machine-readable operational snapshot
+- manifest.json    : File list with checksums and metadata
+`);
+
+  addFile('teams.csv', teamsCsv);
+  addFile('participants.csv', participantsCsv);
+  addFile('checkin.csv', checkinCsv);
+  addFile('rooms.csv', roomsCsv);
+  addFile('scores.csv', scoresCsv);
+  addFile('snapshot.json', JSON.stringify(snapshotJson, null, 2));
+
+  const manifest = {
+    generatedAt: new Date().toISOString(),
+    hackathonId,
+    hackathonName,
+    formatVersion: 2,
+    files: checksums,
+    totalFiles: Object.keys(checksums).length,
+  };
+
+  addFile('manifest.json', JSON.stringify(manifest, null, 2));
+
+  archive.finalize();
+
+  const safeName = hackathonName.replace(/[^a-zA-Z0-9_-]/g, '_');
+  return {
+    stream: archive,
+    filename: `Nexora-Emergency-Pack-${safeName}.zip`,
   };
 }

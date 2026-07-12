@@ -129,5 +129,17 @@ export async function checkIntegrity(hackathonId: string): Promise<IntegrityRepo
 
   const overall: IssueSeverity = issues.some(i => i.severity === 'CRITICAL') ? 'CRITICAL' : issues.some(i => i.severity === 'WARNING') ? 'WARNING' : 'HEALTHY';
 
-  return { overall, issues, healthy: issues.length === 0 };
+  return {
+    overall,
+    issues,
+    healthy: issues.length === 0,
+    summary: {
+      totalTeams: teams.length,
+      totalParticipants: participants.length,
+      totalRooms: rooms.length,
+      totalScores: scores.length,
+      totalRegistrations: registrations.length,
+      totalCertificates: certificates.length,
+    },
+  };
 }

@@ -27,6 +27,7 @@ import { apiLimiter, authLimiter } from './middleware/rateLimiter';
 import { setupSocketHandlers } from './lib/socket';
 import { startEmailWorker } from './services/email/worker.service';
 import { startScheduler } from './services/email/scheduler.service';
+import { startSnapshotScheduler } from './services/reliability/snapshotScheduler.service';
 import { logger } from './lib/logger';
 
 dotenv.config();
@@ -127,6 +128,7 @@ setupSocketHandlers(io);
 
 startEmailWorker();
 startScheduler();
+startSnapshotScheduler();
 
 const PORT = parseInt(process.env.PORT || '4000', 10);
 httpServer.listen(PORT, '0.0.0.0', () => {
