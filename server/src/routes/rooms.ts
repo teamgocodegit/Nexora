@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
-import { authenticate, AuthRequest } from '../middleware/auth';
-import { requireSuperAdmin, requirePermission } from '../middleware/permissions';
+import { authenticate, requireHackathonAccess, AuthRequest } from '../middleware/auth';
+import { requireSuperAdmin } from '../middleware/permissions';
 import { io } from '../index';
 import { softDeleteRoom } from '../services/reliability/softDelete.service';
 import { logActivity } from '../services/reliability/activityLog.service';
@@ -22,6 +22,7 @@ import {
 
 export const roomsRouter = Router({ mergeParams: true });
 roomsRouter.use(authenticate);
+roomsRouter.use(requireHackathonAccess);
 
 roomsRouter.get('/', async (req: AuthRequest, res) => {
   try {

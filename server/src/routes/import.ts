@@ -4,7 +4,7 @@ import path from 'path';
 import * as fs from 'fs';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
-import { authenticate, requireSuperAdmin, AuthRequest } from '../middleware/auth';
+import { authenticate, requireSuperAdmin, requireHackathonAccess, AuthRequest } from '../middleware/auth';
 import { parseFile, inspectFile, cleanupFile } from '../services/import/parser.service';
 import { suggestMapping, detectLayout, applyMapping, type LayoutType, type ColumnMapping } from '../services/import/mapper.service';
 import { normalizeRecord } from '../services/import/normalizer.service';
@@ -17,6 +17,7 @@ import { logger } from '../lib/logger';
 
 export const importRouter = Router({ mergeParams: true });
 importRouter.use(authenticate);
+importRouter.use(requireHackathonAccess);
 importRouter.use(requireSuperAdmin);
 
 const UPLOAD_DIR = path.resolve(__dirname, '../../uploads/imports');

@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireHackathonAccess } from '../middleware/auth';
 import { requireSuperAdmin } from '../middleware/permissions';
 import { prisma } from '../lib/prisma';
 import { logActivity } from '../services/reliability/activityLog.service';
@@ -13,6 +13,7 @@ import { findStuckJobs, recoverStuckImport, recoverStuckCampaign } from '../serv
 export const reliabilityRouter = Router({ mergeParams: true });
 
 reliabilityRouter.use(authenticate);
+reliabilityRouter.use(requireHackathonAccess);
 reliabilityRouter.use(requireSuperAdmin);
 
 /* ───── Integrity Check ───── */

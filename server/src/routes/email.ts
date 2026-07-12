@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import rateLimit from 'express-rate-limit';
 import { prisma } from '../lib/prisma';
-import { authenticate, requireSuperAdmin, AuthRequest } from '../middleware/auth';
+import { authenticate, requireSuperAdmin, requireHackathonAccess, AuthRequest } from '../middleware/auth';
 import { createResendProvider } from '../services/email/resend.provider';
 import { renderTemplate, extractVariables, BUILTIN_TEMPLATES, sanitizeHtml } from '../services/email/template.service';
 import { resolveAudience, buildTemplateContext, launchCampaign } from '../services/email/campaign.service';
@@ -10,6 +10,7 @@ import { logger } from '../lib/logger';
 
 export const emailRouter = Router({ mergeParams: true });
 emailRouter.use(authenticate);
+emailRouter.use(requireHackathonAccess);
 emailRouter.use(requireSuperAdmin);
 
 const emailActionLimiter = rateLimit({

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
-import { authenticate, requireAdmin, requireSuperAdmin, AuthRequest } from '../middleware/auth';
+import { authenticate, requireAdmin, requireSuperAdmin, requireHackathonAccess, AuthRequest } from '../middleware/auth';
 import { logActivity } from '../services/reliability/activityLog.service';
 
 export const hackathonsRouter = Router();
@@ -38,10 +38,18 @@ hackathonsRouter.get('/slug/:slug', async (req, res) => {
   } catch { res.status(500).json({ error: 'Failed to fetch hackathon' }); }
 });
 
-hackathonsRouter.get('/:id', async (req, res) => {
+hackathonsRouter.get('/:id', async (req: AuthRequest, res) => {
   try {
     const h = await prisma.hackathon.findUnique({ where: { id: req.params.id }, include: hackathonInclude });
     if (!h) return res.status(404).json({ error: 'Not found' });
+
+    if (req.user?.role !== 'SUPER_ADMIN') {
+      const assignment = await prisma.coordinatorAssignment.findUnique({
+        where: { hackathonId_userId: { hackathonId: h.id, userId: req.user!.id } },
+      });
+      if (!assignment) return res.status(403).json({ error: 'You do not have access to this hackathon' });
+    }
+
     res.json(h);
   } catch { res.status(500).json({ error: 'Failed to fetch hackathon' }); }
 });
@@ -55,7 +63,7 @@ hackathonsRouter.post('/', requireAdmin, async (req: AuthRequest, res) => {
   } catch (err: any) { res.status(500).json({ error: 'Failed to create hackathon', details: err.message }); }
 });
 
-hackathonsRouter.patch('/:id', requireAdmin, async (req, res) => {
+hackathonsRouter.patch('/:id', requireAdmin, async (req: AuthRequest, res) => {
   const { name, description, venue, startDate, endDate, status, maxTeams, mode } = req.body;
   try {
     const h = await prisma.hackathon.update({ where: { id: req.params.id }, data: { ...(name && { name }), ...(description !== undefined && { description }), ...(venue !== undefined && { venue }), ...(startDate && { startDate: new Date(startDate) }), ...(endDate && { endDate: new Date(endDate) }), ...(status && { status }), ...(maxTeams !== undefined && { maxTeams }), ...(mode && { mode }) }, include: hackathonInclude });

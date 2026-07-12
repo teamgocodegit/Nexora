@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { authenticate } from '../middleware/auth';
-import { requireSuperAdmin, requirePermission } from '../middleware/permissions';
+import { authenticate, requireHackathonAccess } from '../middleware/auth';
+import { requireSuperAdmin } from '../middleware/permissions';
 import { getOpsDashboard, getRoomCards, getExceptions, getLiveRoomData } from '../services/venue/operations.service';
 import { checkCapacity, assignTeamsToRoom, moveTeamToRoom, unassignTeams, previewAutoAssign, applyAutoAssign } from '../services/venue/room.service';
 import { logActivity } from '../services/reliability/activityLog.service';
@@ -10,6 +10,7 @@ import { prisma } from '../lib/prisma';
 
 export const operationsRouter = Router({ mergeParams: true });
 operationsRouter.use(authenticate);
+operationsRouter.use(requireHackathonAccess);
 
 operationsRouter.get('/dashboard', async (req: Request, res: Response) => {
   try {

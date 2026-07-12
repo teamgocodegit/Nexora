@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
-import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth';
+import { authenticate, requireAdmin, requireHackathonAccess, requirePermission, AuthRequest } from '../middleware/auth';
 import { generateCertificates } from '../services/certificate.service';
 
 export const verifyRouter = Router();
@@ -34,6 +34,7 @@ verifyRouter.get('/:certificateId/verify', async (req, res) => {
 
 export const certificatesRouter = Router({ mergeParams: true });
 certificatesRouter.use(authenticate);
+certificatesRouter.use(requireHackathonAccess);
 
 certificatesRouter.get('/', async (req: AuthRequest, res) => {
   try {

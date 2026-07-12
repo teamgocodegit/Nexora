@@ -1,4 +1,6 @@
 import { PrismaClient, TeamStatus } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+
 const prisma = new PrismaClient();
 
 const TEAMS = [
@@ -12,15 +14,19 @@ const TEAMS = [
 async function main() {
   console.log('Seeding Nexora…');
 
+  const seedPassword = process.env.SEED_PASSWORD || 'nexora-dev-2024';
+
+  const passwordHash = bcrypt.hashSync(seedPassword, 12);
+
   const admin = await prisma.user.upsert({
     where: { email: 'admin@nexora.dev' },
-    update: {},
-    create: { name: 'Nexora Admin', email: 'admin@nexora.dev', role: 'SUPER_ADMIN' },
+    update: { passwordHash },
+    create: { name: 'Nexora Admin', email: 'admin@nexora.dev', role: 'SUPER_ADMIN', passwordHash },
   });
 
   const coords = await Promise.all([
-    prisma.user.upsert({ where: { email: 'coord1@nexora.dev' }, update: {}, create: { name: 'Riya Sharma', email: 'coord1@nexora.dev', role: 'SUB_ADMIN' } }),
-    prisma.user.upsert({ where: { email: 'coord2@nexora.dev' }, update: {}, create: { name: 'Aakash Patel', email: 'coord2@nexora.dev', role: 'SUB_ADMIN' } }),
+    prisma.user.upsert({ where: { email: 'coord1@nexora.dev' }, update: { passwordHash }, create: { name: 'Riya Sharma', email: 'coord1@nexora.dev', role: 'SUB_ADMIN', passwordHash } }),
+    prisma.user.upsert({ where: { email: 'coord2@nexora.dev' }, update: { passwordHash }, create: { name: 'Aakash Patel', email: 'coord2@nexora.dev', role: 'SUB_ADMIN', passwordHash } }),
   ]);
 
   const hackathon = await prisma.hackathon.upsert({
@@ -83,9 +89,9 @@ async function main() {
   });
 
   console.log('Seed complete!');
-  console.log('  Login: admin@nexora.dev (SUPER_ADMIN)');
-  console.log('  Login: coord1@nexora.dev (SUB_ADMIN)');
-  console.log('  Login: coord2@nexora.dev (SUB_ADMIN)');
+  console.log(`  Login: admin@nexora.dev / ${seedPassword} (SUPER_ADMIN)`);
+  console.log(`  Login: coord1@nexora.dev / ${seedPassword} (SUB_ADMIN)`);
+  console.log(`  Login: coord2@nexora.dev / ${seedPassword} (SUB_ADMIN)`);
 }
 
 main().catch(console.error).finally(() => prisma.$disconnect());

@@ -1,37 +1,30 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Zap, Shield } from 'lucide-react';
+import { ArrowRight, Zap, Eye, EyeOff } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
-
-const DEV_ACCOUNTS: Record<string, { name: string; role: 'SUPER_ADMIN' | 'SUB_ADMIN'; id: string }> = {
-  'admin@nexora.dev': { name: 'Nexora Admin', role: 'SUPER_ADMIN', id: 'dev-admin' },
-  'coord1@nexora.dev': { name: 'Riya Sharma', role: 'SUB_ADMIN', id: 'dev-coord1' },
-  'coord2@nexora.dev': { name: 'Aakash Patel', role: 'SUB_ADMIN', id: 'dev-coord2' },
-};
-
-function b64(o: object) {
-  return btoa(JSON.stringify(o));
-}
+import { reconnectSocket } from '@/lib/socket';
 
 export function AuthPage() {
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
 
   const handleLogin = async () => {
-    if (!name.trim() || !email.trim()) return;
+    if (!email.trim() || !password) return;
     setLoading(true);
     setError('');
     try {
       const res = await api.post<{ token: string; user: any }>('/auth/login', {
-        name: name.trim(),
         email: email.trim(),
+        password,
       });
       setAuth(res.user, res.token);
+      reconnectSocket();
       const pending = sessionStorage.getItem('pendingInvite');
       if (pending) {
         sessionStorage.removeItem('pendingInvite');
@@ -40,14 +33,7 @@ export function AuthPage() {
         navigate('/', { replace: true });
       }
     } catch (e: any) {
-      const account = DEV_ACCOUNTS[email.trim().toLowerCase()];
-      if (account) {
-        const token = [b64({ alg: 'HS256', typ: 'JWT' }), b64({ id: account.id, name: account.name, email: email.trim(), role: account.role }), 'dev-mode'].join('.');
-        setAuth({ id: account.id, name: account.name, email: email.trim(), role: account.role }, token);
-        navigate('/', { replace: true });
-      } else {
-        setError(e.message);
-      }
+      setError(e.message || 'Invalid email or password.');
     } finally {
       setLoading(false);
     }
@@ -128,17 +114,8 @@ export function AuthPage() {
 
         <div className="space-y-3">
           <input
-            type="text"
-            autoFocus
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-            placeholder="Full name"
-            className="input-dark"
-          />
-
-          <input
             type="email"
+            autoFocus
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
@@ -146,19 +123,39 @@ export function AuthPage() {
             className="input-dark"
           />
 
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+              placeholder="Password"
+              className="input-dark w-full pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2"
+              style={{ color: 'rgba(255,255,255,0.3)' }}
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+
           <button
             onClick={handleLogin}
-            disabled={loading || !name.trim() || !email.trim()}
+            disabled={loading || !email.trim() || !password}
             className="w-full"
             style={{
               height: 52,
-              background: loading || !name.trim() || !email.trim() ? 'rgba(255,255,255,0.06)' : 'white',
-              color: loading || !name.trim() || !email.trim() ? 'rgba(255,255,255,0.3)' : '#000',
+              background: loading || !email.trim() || !password ? 'rgba(255,255,255,0.06)' : 'white',
+              color: loading || !email.trim() || !password ? 'rgba(255,255,255,0.3)' : '#000',
               borderRadius: 'var(--r-md)',
               border: 'none',
               fontSize: 15,
               fontWeight: 600,
-              cursor: loading || !name.trim() || !email.trim() ? 'not-allowed' : 'pointer',
+              cursor: loading || !email.trim() || !password ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -171,7 +168,7 @@ export function AuthPage() {
               <div className="spinner" style={{ width: 18, height: 18 }} />
             ) : (
               <>
-                Continue <ArrowRight className="w-4 h-4" />
+                Sign in <ArrowRight className="w-4 h-4" />
               </>
             )}
           </button>

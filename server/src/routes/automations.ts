@@ -1,13 +1,14 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
-import { authenticate, requireSuperAdmin, AuthRequest } from '../middleware/auth';
+import { authenticate, requireSuperAdmin, requireHackathonAccess, AuthRequest } from '../middleware/auth';
 import { io } from '../index';
 import { emitToHackathon } from '../lib/socket';
 import { logger } from '../lib/logger';
 
 export const automationsRouter = Router({ mergeParams: true });
 automationsRouter.use(authenticate);
+automationsRouter.use(requireHackathonAccess);
 
 const createSchema = z.object({
   name: z.string().min(1),
@@ -98,6 +99,7 @@ automationsRouter.delete('/:id', requireSuperAdmin, async (req: AuthRequest, res
 // Milestones
 export const milestonesRouter = Router({ mergeParams: true });
 milestonesRouter.use(authenticate);
+milestonesRouter.use(requireHackathonAccess);
 
 const milestoneSchema = z.object({
   title: z.string().min(1),

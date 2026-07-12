@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { authenticate } from '../middleware/auth';
-import { requireSuperAdmin, requirePermission } from '../middleware/permissions';
+import { authenticate, requireHackathonAccess } from '../middleware/auth';
+import { requireSuperAdmin } from '../middleware/permissions';
 import { logActivity } from '../services/reliability/activityLog.service';
 import { logger } from '../lib/logger';
 
@@ -23,6 +23,7 @@ import {
 
 export const printRouter = Router({ mergeParams: true });
 printRouter.use(authenticate);
+printRouter.use(requireHackathonAccess);
 printRouter.use(requireSuperAdmin);
 
 const SAFE_NAME_RE = /[^a-zA-Z0-9_-]/g;

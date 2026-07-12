@@ -9,8 +9,13 @@ export type Permission =
   | 'team:create'
   | 'team:edit'
   | 'team:delete'
+  | 'team:checkin'
+  | 'team:view'
+  | 'team:search'
   | 'certificate:generate'
+  | 'certificate:view'
   | 'message:broadcast'
+  | 'message:view'
   | 'admin:manage'
   | 'admin:create'
   | 'admin:edit'
@@ -24,23 +29,28 @@ export type Permission =
   | 'analytics:view'
   | 'activity:view'
   | 'qrcode:manage'
-  | 'team:checkin'
-  | 'team:view'
-  | 'team:search'
   | 'announcement:view'
   | 'room:manage'
   | 'room:view'
   | 'room:assign'
   | 'print:documents'
   | 'automation:manage'
-  | 'registration:manage';
+  | 'registration:manage'
+  | 'registration:view'
+  | 'reliability:view'
+  | 'reliability:manage'
+  | 'email:manage'
+  | 'email:send'
+  | 'operations:view'
+  | 'milestone:manage';
 
 const ROLE_PERMISSIONS: Record<string, Permission[]> = {
   SUPER_ADMIN: [
     'hackathon:create', 'hackathon:edit', 'hackathon:delete', 'hackathon:close',
     'team:create', 'team:edit', 'team:delete',
-    'certificate:generate',
-    'message:broadcast',
+    'team:checkin', 'team:view', 'team:search',
+    'certificate:generate', 'certificate:view',
+    'message:broadcast', 'message:view',
     'admin:manage', 'admin:create', 'admin:edit', 'admin:disable', 'admin:delete',
     'import:csv',
     'judge:manage',
@@ -50,14 +60,15 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'analytics:view',
     'activity:view',
     'qrcode:manage',
-    'team:checkin', 'team:view', 'team:search',
     'announcement:view',
-    'room:manage',
-    'room:view',
-    'room:assign',
+    'room:manage', 'room:view', 'room:assign',
     'print:documents',
     'automation:manage',
-    'registration:manage',
+    'registration:manage', 'registration:view',
+    'reliability:view', 'reliability:manage',
+    'email:manage', 'email:send',
+    'operations:view',
+    'milestone:manage',
   ],
   SUB_ADMIN: [
     'team:checkin', 'team:view', 'team:search',

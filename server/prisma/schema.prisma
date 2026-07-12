@@ -148,10 +148,14 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  isActive        Boolean  @default(true)
-  lastLoginAt     DateTime?
-  lastActivityAt  DateTime?
-  assignedRooms   String?
+  passwordHash        String?
+  isActive            Boolean  @default(true)
+  lastLoginAt         DateTime?
+  lastActivityAt      DateTime?
+  passwordChangedAt   DateTime?
+  failedLoginAttempts Int      @default(0)
+  lockedUntil         DateTime?
+  assignedRooms       String?
 
   hackathons          Hackathon[]             @relation("HackathonCreator")
   archivedHackathons  Hackathon[]             @relation("HackathonArchiver")
